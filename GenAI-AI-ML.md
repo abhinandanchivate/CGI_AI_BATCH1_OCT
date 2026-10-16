@@ -58,3 +58,27 @@ Explain:
 - How can GenAI explain the recommendation without presenting the prediction as a certainty?
 - Who should make the final decision, and why?
 
+2. A correct prediction but an incorrect promotional message
+The ML system predicts high demand for biscuits. The approved offer is 10% off selected biscuit brands tomorrow only. GenAI creates this message:
+“Festival celebration! Get 25% off all biscuits throughout the week. Hurry—stock is almost gone!”
+
+The message sounds attractive, and the marketing team wants to send it immediately.
+Question: Identify every unsupported or incorrect claim and design a process that prevents this message from reaching customers.
+Explain:
+- Does a correct ML prediction make the generated message trustworthy?
+- Which facts should come from approved business records?
+- Which checks can use fixed rules, and which require human judgement?
+- Write a corrected promotional message using only verified information.
+
+  
+3. Improving one outcome while harming another
+The queue system recommends opening another counter whenever more than five customers are waiting. During a festival rush, it moves two employees from shelf replenishment to billing.
+Queues become shorter, but shelves remain empty even though products are available in the storeroom. Sales fall, and customers complain.
+Question: Why did a reasonable local decision produce a poor overall business result? Redesign the solution using AI, ML, and GenAI.
+Explain:
+- What should ML predict besides queue length?
+- What staffing constraints and competing goals should the AI decision system consider?
+- How could GenAI help communicate employee assignments?
+- Which measures would show whether the overall solution is successful?
+- What should happen when no staffing arrangement can satisfy every requirement?
+
