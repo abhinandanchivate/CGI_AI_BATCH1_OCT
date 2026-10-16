@@ -48,3 +48,13 @@ Answer these questions:
 4. What could go wrong if GenAI invents a discount?
 5. Who should approve the promotional message before it is sent?
 
+**Few more questions/situations**:
+1. Conflicting recommendations during festival demand
+The ML system predicts that the supermarket will sell 300 milk packets tomorrow. However, the refrigerator can hold only 220 packets, and the supplier cannot accept returns. The manager also knows that road construction may reduce customer visits.
+Question: How should AI, ML, and GenAI work together to help the manager decide how much milk to order?
+Explain:
+- What additional information is needed before accepting the prediction?
+- How should the decision system handle storage limits and possible wastage?
+- How can GenAI explain the recommendation without presenting the prediction as a certainty?
+- Who should make the final decision, and why?
+
