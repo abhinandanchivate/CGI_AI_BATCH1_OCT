@@ -1,0 +1,1759 @@
+{
+  "info": {
+    "name": "Day 1 GenAI Labs 1.1–1.5 | Success + Failure Test Suite",
+    "description": "Verified against main.py in the supplied day1-labs.zip. 14 API endpoints across five independent FastAPI apps. Select a lab folder and start uvicorn on its indicated port. Requests are training examples, not live banking actions. For PNG responses use Postman Send and Download or Save Response. Some endpoints require GEMINI_API_KEY and Imagen may require billing. Includes negative tests for 400, 404, 422 plus opt-in integration failure scenarios. Success requests remain unchanged. Run controlled failures separately; some require configuration changes. HTTP 422 is Pydantic/FastAPI validation, 400 is custom ValueError, 502 is Gemini errors, 500 is missing key RuntimeError.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "Lab 1.1 — BPE Tokenization & Embeddings (8001)",
+      "description": "Start: python -m uvicorn main:app --reload --port 8001. BPE train is offline; compare uses Gemini token counting; embeddings uses Gemini.",
+      "item": [
+        {
+          "name": "POST Train BPE — low/lower/lowest",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{lab1BaseUrl}}/day1/bpe/train",
+            "description": "Train toy BPE merges and examine round-trip text.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"corpus\": \"low lower lowest low lower lowest lower lowest newer newest newest\",\n  \"num_merges\": 12,\n  \"sample\": \"lowest lower\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", function () { pm.response.to.have.status(200); });",
+                  "pm.test(\"BPE merges exist\", function(){pm.expect(pm.response.json()).to.have.property(\"merges_learned\");});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST Compare Tokenizers — banking text",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{lab1BaseUrl}}/day1/bpe/compare",
+            "description": "Compares custom BPE with Gemini token counting and optional tiktoken. Requires Gemini API key.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"text\": \"Your UPI payment of INR 2,000 failed and was reversed.\",\n  \"num_merges\": 30\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", function () { pm.response.to.have.status(200); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST Embedding Similarity — banking statements",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{lab1BaseUrl}}/day1/embed/similarity",
+            "description": "Compare semantic similarity of sentences; Gemini embeddings require credentials.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"sentences\": [\n    \"The customer reported an unauthorized card transaction.\",\n    \"A cardholder disputed a payment they did not approve.\",\n    \"The bank increased fixed deposit interest rates.\",\n    \"Deposit returns were raised by the bank.\",\n    \"The weather is sunny today.\"\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", function () { pm.response.to.have.status(200); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "❌ Failure Scenarios — Expected Errors",
+          "description": "Run these tests with the corresponding lab service running. Assertions expect actual application behavior. Provider errors tested separately below.",
+          "item": [
+            {
+              "name": "FAIL | POST /bpe/train — num_merges zero",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": "{{lab1BaseUrl}}/day1/bpe/train",
+                "description": "NEGATIVE TEST. Expected HTTP 422. Bounds: num_merges >= 1. Derived from actual main.py validation.",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"num_merges\": 0\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"Expected HTTP 422\", function() { pm.response.to.have.status(422); });",
+                      "pm.test(\"Response is JSON\", function() { pm.response.to.be.json; });",
+                      "pm.test(\"Validation details returned\", function() { pm.expect(pm.response.json()).to.have.property(\"detail\"); });"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "FAIL | POST /bpe/train — num_merges over 500",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": "{{lab1BaseUrl}}/day1/bpe/train",
+                "description": "NEGATIVE TEST. Expected HTTP 422. Bounds: num_merges <= 500. Derived from actual main.py validation.",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"num_merges\": 501\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"Expected HTTP 422\", function() { pm.response.to.have.status(422); });",
+                      "pm.test(\"Response is JSON\", function() { pm.response.to.be.json; });",
+                      "pm.test(\"Validation details returned\", function() { pm.expect(pm.response.json()).to.have.property(\"detail\"); });"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "FAIL | POST /embed/similarity — only one sentence",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": "{{lab1BaseUrl}}/day1/embed/similarity",
+                "description": "NEGATIVE TEST. Expected HTTP 422. At least two sentences required. Derived from actual main.py validation.",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"sentences\": [\n    \"Only one sentence\"\n  ]\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"Expected HTTP 422\", function() { pm.response.to.have.status(422); });",
+                      "pm.test(\"Response is JSON\", function() { pm.response.to.be.json; });",
+                      "pm.test(\"Validation details returned\", function() { pm.expect(pm.response.json()).to.have.property(\"detail\"); });"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "FAIL | POST /embed/similarity — wrong type",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": "{{lab1BaseUrl}}/day1/embed/similarity",
+                "description": "NEGATIVE TEST. Expected HTTP 422. List required. Derived from actual main.py validation.",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"sentences\": \"not a list\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"Expected HTTP 422\", function() { pm.response.to.have.status(422); });",
+                      "pm.test(\"Response is JSON\", function() { pm.response.to.be.json; });",
+                      "pm.test(\"Validation details returned\", function() { pm.expect(pm.response.json()).to.have.property(\"detail\"); });"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "FAIL | Unknown route",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": "{{lab1BaseUrl}}/day1/route-does-not-exist",
+                "description": "Failure example: expected 404."
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"Expected HTTP 404\", () => pm.response.to.have.status(404));"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "FAIL | Unsupported HTTP method",
+              "request": {
+                "method": "PATCH",
+                "header": [],
+                "url": "{{lab1BaseUrl}}/day1/bpe/train",
+                "description": "Failure example: expected 405."
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"Expected HTTP 405\", () => pm.response.to.have.status(405));"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "MANUAL FAILURE | Missing Gemini API key (requires restart)",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": "{{lab1BaseUrl}}/day1/bpe/compare",
+                "description": "Stop the service, remove GEMINI_API_KEY and GOOGLE_API_KEY from the lab .env and OS environment, restart the service, then run. Expected 500 from RuntimeError. Do not execute with a configured key.",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"text\": \"Your UPI payment of INR 2,000 failed and was reversed.\",\n  \"num_merges\": 30\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"Missing key returns 500\", () => pm.response.to.have.status(500));"
+                    ]
+                  }
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Lab 1.2 — Reasoning Strategies (8002)",
+      "description": "Start: python -m uvicorn main:app --reload --port 8002. Gemini key required for comparisons.",
+      "item": [
+        {
+          "name": "GET List Reasoning Strategies",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{lab2BaseUrl}}/day1/reasoning/strategies",
+            "description": "List all five strategy identifiers."
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", function () { pm.response.to.have.status(200); });",
+                  "pm.test(\"Five strategies\",function(){pm.expect(pm.response.json().strategies.length).to.eql(5);});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST Compare — All Five Strategies",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{lab2BaseUrl}}/day1/reasoning/compare",
+            "description": "Nine Gemini generation calls in total: 1+1+5+1+1. Expected arithmetic answer INR 26500. Thinking availability depends on model.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"question\": \"A customer starts with INR 20000. Salary credit INR 15000, ATM debit INR 5000, card purchase INR 3000, bank charges INR 500, and failed UPI debit INR 2000 fully reversed. What is the final balance?\",\n  \"strategies\": [\n    \"direct\",\n    \"chain_of_thought\",\n    \"self_consistency\",\n    \"thinking_budget\",\n    \"thinking_dynamic\"\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", function () { pm.response.to.have.status(200); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST Direct vs Step-by-Step",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{lab2BaseUrl}}/day1/reasoning/compare",
+            "description": "Compare visible explanations vs direct answer.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"question\": \"Calculate INR 20000 + INR 15000 - INR 5000 - INR 3000 - INR 500. Return the final balance.\",\n  \"strategies\": [\n    \"direct\",\n    \"chain_of_thought\"\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", function () { pm.response.to.have.status(200); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST Self-Consistency — Reversal Dispute",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{lab2BaseUrl}}/day1/reasoning/compare",
+            "description": "Five sampled candidate responses. Agreement is not a correctness guarantee. Expected INR 8500.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"question\": \"Opening balance INR 10000. A UPI debit of INR 2000 was reversed in full. Another merchant debit of INR 1500 succeeded. What is the closing balance?\",\n  \"strategies\": [\n    \"self_consistency\"\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", function () { pm.response.to.have.status(200); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "❌ Failure Scenarios — Expected Errors",
+          "description": "Run these tests with the corresponding lab service running. Assertions expect actual application behavior. Provider errors tested separately below.",
+          "item": [
+            {
+              "name": "FAIL | POST /compare — unknown strategy",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": "{{lab2BaseUrl}}/day1/reasoning/compare",
+                "description": "NEGATIVE TEST. Expected HTTP 422. Literal strategy validation. Derived from actual main.py validation.",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"question\": \"What is 2+2?\",\n  \"strategies\": [\n    \"not_a_strategy\"\n  ]\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"Expected HTTP 422\", function() { pm.response.to.have.status(422); });",
+                      "pm.test(\"Response is JSON\", function() { pm.response.to.be.json; });",
+                      "pm.test(\"Validation details returned\", function() { pm.expect(pm.response.json()).to.have.property(\"detail\"); });"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "FAIL | POST /compare — wrong list type",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": "{{lab2BaseUrl}}/day1/reasoning/compare",
+                "description": "NEGATIVE TEST. Expected HTTP 422. Strategies must be an array. Derived from actual main.py validation.",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"question\": \"What is 2+2?\",\n  \"strategies\": \"direct\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"Expected HTTP 422\", function() { pm.response.to.have.status(422); });",
+                      "pm.test(\"Response is JSON\", function() { pm.response.to.be.json; });",
+                      "pm.test(\"Validation details returned\", function() { pm.expect(pm.response.json()).to.have.property(\"detail\"); });"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "FAIL | POST /compare — malformed question type",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": "{{lab2BaseUrl}}/day1/reasoning/compare",
+                "description": "NEGATIVE TEST. Expected HTTP 422. Question must be a string. Derived from actual main.py validation.",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"question\": [\n    \"bad\"\n  ],\n  \"strategies\": [\n    \"direct\"\n  ]\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"Expected HTTP 422\", function() { pm.response.to.have.status(422); });",
+                      "pm.test(\"Response is JSON\", function() { pm.response.to.be.json; });",
+                      "pm.test(\"Validation details returned\", function() { pm.expect(pm.response.json()).to.have.property(\"detail\"); });"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "FAIL | Unknown route",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": "{{lab2BaseUrl}}/day1/route-does-not-exist",
+                "description": "Failure example: expected 404."
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"Expected HTTP 404\", () => pm.response.to.have.status(404));"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "FAIL | Unsupported HTTP method",
+              "request": {
+                "method": "PATCH",
+                "header": [],
+                "url": "{{lab2BaseUrl}}/day1/reasoning/strategies",
+                "description": "Failure example: expected 405."
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"Expected HTTP 405\", () => pm.response.to.have.status(405));"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "MANUAL FAILURE | Missing Gemini API key (requires restart)",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": "{{lab2BaseUrl}}/day1/reasoning/compare",
+                "description": "Stop the service, remove GEMINI_API_KEY and GOOGLE_API_KEY from the lab .env and OS environment, restart the service, then run. Expected 500 from RuntimeError. Do not execute with a configured key.",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"question\": \"A customer starts with INR 20000. Salary credit INR 15000, ATM debit INR 5000, card purchase INR 3000, bank charges INR 500, and failed UPI debit INR 2000 fully reversed. What is the final balance?\",\n  \"strategies\": [\n    \"direct\",\n    \"chain_of_thought\",\n    \"self_consistency\",\n    \"thinking_budget\",\n    \"thinking_dynamic\"\n  ]\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"Missing key returns 500\", () => pm.response.to.have.status(500));"
+                    ]
+                  }
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Lab 1.3 — Sampling Controls (8003)",
+      "description": "Start: python -m uvicorn main:app --reload --port 8003. Local simulator needs no Gemini key.",
+      "item": [
+        {
+          "name": "POST Local Sampling — Temperature 0.2",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{lab3BaseUrl}}/day1/sampling/local",
+            "description": "Offline demo of low-temperature sampling. Equal number of logits and tokens required.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"tokens\": [\n    \"approved\",\n    \"pending\",\n    \"rejected\",\n    \"escalate\"\n  ],\n  \"logits\": [\n    4.2,\n    2.8,\n    1.6,\n    0.8\n  ],\n  \"temperature\": 0.2,\n  \"top_k\": 3,\n  \"top_p\": 0.95,\n  \"samples\": 100\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", function () { pm.response.to.have.status(200); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST Local Sampling — Temperature 1.5",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{lab3BaseUrl}}/day1/sampling/local",
+            "description": "Offline demo of higher temperature.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"tokens\": [\n    \"approved\",\n    \"pending\",\n    \"rejected\",\n    \"escalate\"\n  ],\n  \"logits\": [\n    4.2,\n    2.8,\n    1.6,\n    0.8\n  ],\n  \"temperature\": 1.5,\n  \"top_k\": 4,\n  \"top_p\": 1.0,\n  \"samples\": 100\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", function () { pm.response.to.have.status(200); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST Gemini Sampling — Welcome Messages",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{lab3BaseUrl}}/day1/sampling/gemini",
+            "description": "Gemini-based multi-sample generation; credentials required.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"prompt\": \"Write one short, professional welcome message for a new digital banking customer. Do not mention specific account benefits.\",\n  \"n\": 5,\n  \"temperature\": 0.9,\n  \"top_p\": 0.95,\n  \"top_k\": 40,\n  \"max_output_tokens\": 80\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", function () { pm.response.to.have.status(200); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST Gemini Sampling — Low Temperature",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{lab3BaseUrl}}/day1/sampling/gemini",
+            "description": "Compare more conservative generation; model may still vary.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"prompt\": \"Explain in one sentence what a failed and fully reversed UPI debit means.\",\n  \"n\": 3,\n  \"temperature\": 0.1,\n  \"top_p\": 0.95,\n  \"top_k\": 40,\n  \"max_output_tokens\": 80\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", function () { pm.response.to.have.status(200); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "❌ Failure Scenarios — Expected Errors",
+          "description": "Run these tests with the corresponding lab service running. Assertions expect actual application behavior. Provider errors tested separately below.",
+          "item": [
+            {
+              "name": "FAIL | POST /sampling/local — temperature above 5",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": "{{lab3BaseUrl}}/day1/sampling/local",
+                "description": "NEGATIVE TEST. Expected HTTP 422. Local temperature is limited to 0..5. Derived from actual main.py validation.",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"temperature\": 6\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"Expected HTTP 422\", function() { pm.response.to.have.status(422); });",
+                      "pm.test(\"Response is JSON\", function() { pm.response.to.be.json; });",
+                      "pm.test(\"Validation details returned\", function() { pm.expect(pm.response.json()).to.have.property(\"detail\"); });"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "FAIL | POST /sampling/local — unequal token/logit lengths",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": "{{lab3BaseUrl}}/day1/sampling/local",
+                "description": "NEGATIVE TEST. Expected HTTP 400. Custom ValueError: lengths differ. Derived from actual main.py validation.",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"tokens\": [\n    \"A\",\n    \"B\"\n  ],\n  \"logits\": [\n    1.0\n  ],\n  \"samples\": 2\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"Expected HTTP 400\", function() { pm.response.to.have.status(400); });",
+                      "pm.test(\"Response is JSON\", function() { pm.response.to.be.json; });",
+                      "pm.test(\"Error message returned\", function() { pm.expect(pm.response.json()).to.have.property(\"error\"); });"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "FAIL | POST /sampling/local — top_p zero",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": "{{lab3BaseUrl}}/day1/sampling/local",
+                "description": "NEGATIVE TEST. Expected HTTP 422. Top-p > 0. Derived from actual main.py validation.",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"top_p\": 0\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"Expected HTTP 422\", function() { pm.response.to.have.status(422); });",
+                      "pm.test(\"Response is JSON\", function() { pm.response.to.be.json; });",
+                      "pm.test(\"Validation details returned\", function() { pm.expect(pm.response.json()).to.have.property(\"detail\"); });"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "FAIL | POST /sampling/gemini — n over 10",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": "{{lab3BaseUrl}}/day1/sampling/gemini",
+                "description": "NEGATIVE TEST. Expected HTTP 422. n must be <= 10. Derived from actual main.py validation.",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"n\": 11\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"Expected HTTP 422\", function() { pm.response.to.have.status(422); });",
+                      "pm.test(\"Response is JSON\", function() { pm.response.to.be.json; });",
+                      "pm.test(\"Validation details returned\", function() { pm.expect(pm.response.json()).to.have.property(\"detail\"); });"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "FAIL | POST /sampling/gemini — max tokens zero",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": "{{lab3BaseUrl}}/day1/sampling/gemini",
+                "description": "NEGATIVE TEST. Expected HTTP 422. max_output_tokens >= 1. Derived from actual main.py validation.",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"max_output_tokens\": 0\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"Expected HTTP 422\", function() { pm.response.to.have.status(422); });",
+                      "pm.test(\"Response is JSON\", function() { pm.response.to.be.json; });",
+                      "pm.test(\"Validation details returned\", function() { pm.expect(pm.response.json()).to.have.property(\"detail\"); });"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "FAIL | Unknown route",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": "{{lab3BaseUrl}}/day1/route-does-not-exist",
+                "description": "Failure example: expected 404."
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"Expected HTTP 404\", () => pm.response.to.have.status(404));"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "FAIL | Unsupported HTTP method",
+              "request": {
+                "method": "PATCH",
+                "header": [],
+                "url": "{{lab3BaseUrl}}/day1/sampling/local",
+                "description": "Failure example: expected 405."
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"Expected HTTP 405\", () => pm.response.to.have.status(405));"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "MANUAL FAILURE | Missing Gemini API key (requires restart)",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": "{{lab3BaseUrl}}/day1/sampling/gemini",
+                "description": "Stop the service, remove GEMINI_API_KEY and GOOGLE_API_KEY from the lab .env and OS environment, restart the service, then run. Expected 500 from RuntimeError. Do not execute with a configured key.",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"prompt\": \"Write one short, professional welcome message for a new digital banking customer. Do not mention specific account benefits.\",\n  \"n\": 5,\n  \"temperature\": 0.9,\n  \"top_p\": 0.95,\n  \"top_k\": 40,\n  \"max_output_tokens\": 80\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"Missing key returns 500\", () => pm.response.to.have.status(500));"
+                    ]
+                  }
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Lab 1.4 — Diffusion & Image Generation (8004)",
+      "description": "Start: python -m uvicorn main:app --reload --port 8004. Schedule and forward diffusion are local; image generation requires Imagen-enabled billing.",
+      "item": [
+        {
+          "name": "GET Noise Schedule — Linear",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{lab4BaseUrl}}/day1/diffusion/schedule?kind=linear",
+            "description": "Inspect the linear diffusion noise schedule."
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", function () { pm.response.to.have.status(200); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET Noise Schedule — Cosine",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{lab4BaseUrl}}/day1/diffusion/schedule?kind=cosine",
+            "description": "Inspect the cosine diffusion noise schedule."
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", function () { pm.response.to.have.status(200); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST Forward Diffusion — PNG",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{lab4BaseUrl}}/day1/diffusion/forward",
+            "description": "Returns image/png bytes; use Postman Save Response or Send and Download.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"timesteps\": [\n    0,\n    50,\n    150,\n    300,\n    600,\n    999\n  ],\n  \"kind\": \"linear\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", function () { pm.response.to.have.status(200); });",
+                  "pm.test(\"PNG response\",function(){pm.expect(pm.response.headers.get(\"Content-Type\")).to.include(\"image/png\");});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST Generate Image — PNG (Imagen)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{lab4BaseUrl}}/day1/image/generate",
+            "description": "Returns image/png. Calls Imagen via Gemini SDK; billing-enabled credentials may be required.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"prompt\": \"A clean educational illustration of a friendly robot helping a bank employee understand AI, no text, no brand logos\",\n  \"aspect_ratio\": \"16:9\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", function () { pm.response.to.have.status(200); });",
+                  "pm.test(\"PNG response\",function(){pm.expect(pm.response.headers.get(\"Content-Type\")).to.include(\"image/png\");});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "❌ Failure Scenarios — Expected Errors",
+          "description": "Run these tests with the corresponding lab service running. Assertions expect actual application behavior. Provider errors tested separately below.",
+          "item": [
+            {
+              "name": "FAIL | GET /diffusion/schedule — unsupported kind",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": "{{lab4BaseUrl}}/day1/diffusion/schedule?kind=noise",
+                "description": "NEGATIVE TEST. Expected HTTP 422. Invalid query Literal, kind=noise. Derived from actual main.py validation."
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"Expected HTTP 422\", function() { pm.response.to.have.status(422); });",
+                      "pm.test(\"Response is JSON\", function() { pm.response.to.be.json; });",
+                      "pm.test(\"Validation details returned\", function() { pm.expect(pm.response.json()).to.have.property(\"detail\"); });"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "FAIL | POST /diffusion/forward — timestep out of range",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": "{{lab4BaseUrl}}/day1/diffusion/forward",
+                "description": "NEGATIVE TEST. Expected HTTP 400. Explicit ValueError; 0..999. Derived from actual main.py validation.",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"timesteps\": [\n    0,\n    1000\n  ]\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"Expected HTTP 400\", function() { pm.response.to.have.status(400); });",
+                      "pm.test(\"Response is JSON\", function() { pm.response.to.be.json; });",
+                      "pm.test(\"Error message returned\", function() { pm.expect(pm.response.json()).to.have.property(\"error\"); });"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "FAIL | POST /diffusion/forward — wrong kind",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": "{{lab4BaseUrl}}/day1/diffusion/forward",
+                "description": "NEGATIVE TEST. Expected HTTP 422. Invalid Literal value. Derived from actual main.py validation.",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"kind\": \"exponential\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"Expected HTTP 422\", function() { pm.response.to.have.status(422); });",
+                      "pm.test(\"Response is JSON\", function() { pm.response.to.be.json; });",
+                      "pm.test(\"Validation details returned\", function() { pm.expect(pm.response.json()).to.have.property(\"detail\"); });"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "FAIL | POST /image/generate — aspect ratio unsupported",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": "{{lab4BaseUrl}}/day1/image/generate",
+                "description": "NEGATIVE TEST. Expected HTTP 422. Invalid aspect ratio. Derived from actual main.py validation.",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"prompt\": \"A robot\",\n  \"aspect_ratio\": \"2:1\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"Expected HTTP 422\", function() { pm.response.to.have.status(422); });",
+                      "pm.test(\"Response is JSON\", function() { pm.response.to.be.json; });",
+                      "pm.test(\"Validation details returned\", function() { pm.expect(pm.response.json()).to.have.property(\"detail\"); });"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "FAIL | Unknown route",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": "{{lab4BaseUrl}}/day1/route-does-not-exist",
+                "description": "Failure example: expected 404."
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"Expected HTTP 404\", () => pm.response.to.have.status(404));"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "FAIL | Unsupported HTTP method",
+              "request": {
+                "method": "PATCH",
+                "header": [],
+                "url": "{{lab4BaseUrl}}/day1/diffusion/schedule",
+                "description": "Failure example: expected 405."
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"Expected HTTP 405\", () => pm.response.to.have.status(405));"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "MANUAL FAILURE | Missing Gemini API key (requires restart)",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": "{{lab4BaseUrl}}/day1/image/generate",
+                "description": "Stop the service, remove GEMINI_API_KEY and GOOGLE_API_KEY from the lab .env and OS environment, restart the service, then run. Expected 500 from RuntimeError. Do not execute with a configured key.",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"prompt\": \"A clean educational illustration of a friendly robot helping a bank employee understand AI, no text, no brand logos\",\n  \"aspect_ratio\": \"16:9\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"Missing key returns 500\", () => pm.response.to.have.status(500));"
+                    ]
+                  }
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Lab 1.5 — LangChain Essentials (8005)",
+      "description": "Start: python -m uvicorn main:app --reload --port 8005. Preview works offline; invoke/batch/stream require a Gemini key.",
+      "item": [
+        {
+          "name": "POST Chain Preview — No API Key",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{lab5BaseUrl}}/day1/chain/preview",
+            "description": "Inspect the prompt-template messages; does not call Gemini.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"topic\": \"banking transactions\",\n  \"audience\": \"beginner banking operations trainee\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", function () { pm.response.to.have.status(200); });",
+                  "pm.test(\"Messages exist\",function(){pm.expect(pm.response.json().messages).to.be.an(\"array\");});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST Chain Invoke — One Question",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{lab5BaseUrl}}/day1/chain/invoke",
+            "description": "Executes Prompt | Gemini LLM | StrOutputParser.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"topic\": \"prompt injection in a banking support chatbot\",\n  \"audience\": \"nontechnical bank employee\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", function () { pm.response.to.have.status(200); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST Chain Batch — Three Topics",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{lab5BaseUrl}}/day1/chain/batch",
+            "description": "Runs three prompt/model/parser inputs as a batch.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"items\": [\n    {\n      \"topic\": \"tokenization\",\n      \"audience\": \"beginner developer\"\n    },\n    {\n      \"topic\": \"LLM temperature\",\n      \"audience\": \"banking product manager\"\n    },\n    {\n      \"topic\": \"embeddings for complaint similarity\",\n      \"audience\": \"banking analyst\"\n    }\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", function () { pm.response.to.have.status(200); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST Chain Stream — Plain Text",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{lab5BaseUrl}}/day1/chain/stream",
+            "description": "Streams text/plain response chunks; Postman may present them as one accumulated response.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"topic\": \"why AI responses need verification before banking decisions\",\n  \"audience\": \"customer support trainee\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", function () { pm.response.to.have.status(200); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "❌ Failure Scenarios — Expected Errors",
+          "description": "Run these tests with the corresponding lab service running. Assertions expect actual application behavior. Provider errors tested separately below.",
+          "item": [
+            {
+              "name": "FAIL | POST /chain/preview — non-string topic",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": "{{lab5BaseUrl}}/day1/chain/preview",
+                "description": "NEGATIVE TEST. Expected HTTP 422. Topic must be string. Derived from actual main.py validation.",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"topic\": [\n    \"invalid\"\n  ],\n  \"audience\": \"analysts\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"Expected HTTP 422\", function() { pm.response.to.have.status(422); });",
+                      "pm.test(\"Response is JSON\", function() { pm.response.to.be.json; });",
+                      "pm.test(\"Validation details returned\", function() { pm.expect(pm.response.json()).to.have.property(\"detail\"); });"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "FAIL | POST /chain/batch — invalid nested item",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": "{{lab5BaseUrl}}/day1/chain/batch",
+                "description": "NEGATIVE TEST. Expected HTTP 422. Nested ChainRequest must have string topic. Derived from actual main.py validation.",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"items\": [\n    {\n      \"topic\": {\n        \"invalid\": true\n      },\n      \"audience\": \"banker\"\n    }\n  ]\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"Expected HTTP 422\", function() { pm.response.to.have.status(422); });",
+                      "pm.test(\"Response is JSON\", function() { pm.response.to.be.json; });",
+                      "pm.test(\"Validation details returned\", function() { pm.expect(pm.response.json()).to.have.property(\"detail\"); });"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "FAIL | POST /chain/stream — invalid audience",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": "{{lab5BaseUrl}}/day1/chain/stream",
+                "description": "NEGATIVE TEST. Expected HTTP 422. Audience must be a string. Derived from actual main.py validation.",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"topic\": \"interest rates\",\n  \"audience\": [\n    \"bad\"\n  ]\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"Expected HTTP 422\", function() { pm.response.to.have.status(422); });",
+                      "pm.test(\"Response is JSON\", function() { pm.response.to.be.json; });",
+                      "pm.test(\"Validation details returned\", function() { pm.expect(pm.response.json()).to.have.property(\"detail\"); });"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "FAIL | Unknown route",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": "{{lab5BaseUrl}}/day1/route-does-not-exist",
+                "description": "Failure example: expected 404."
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"Expected HTTP 404\", () => pm.response.to.have.status(404));"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "FAIL | Unsupported HTTP method",
+              "request": {
+                "method": "PATCH",
+                "header": [],
+                "url": "{{lab5BaseUrl}}/day1/chain/preview",
+                "description": "Failure example: expected 405."
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"Expected HTTP 405\", () => pm.response.to.have.status(405));"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "MANUAL FAILURE | Missing Gemini API key (requires restart)",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": "{{lab5BaseUrl}}/day1/chain/invoke",
+                "description": "Run with Gemini key deliberately absent. LangChain may return 500 with different error shape. Failure mode depends on LangChain SDK version.",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"topic\": \"prompt injection in a banking support chatbot\",\n  \"audience\": \"nontechnical bank employee\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"Expected server-side error\", () => pm.expect(pm.response.code).to.be.within(400,599));"
+                    ]
+                  }
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "variable": [
+    {
+      "key": "lab1BaseUrl",
+      "value": "http://127.0.0.1:8001"
+    },
+    {
+      "key": "lab2BaseUrl",
+      "value": "http://127.0.0.1:8002"
+    },
+    {
+      "key": "lab3BaseUrl",
+      "value": "http://127.0.0.1:8003"
+    },
+    {
+      "key": "lab4BaseUrl",
+      "value": "http://127.0.0.1:8004"
+    },
+    {
+      "key": "lab5BaseUrl",
+      "value": "http://127.0.0.1:8005"
+    }
+  ]
+}
