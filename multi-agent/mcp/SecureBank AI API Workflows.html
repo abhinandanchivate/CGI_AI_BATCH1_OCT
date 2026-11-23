@@ -1,0 +1,534 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SecureBank AI API Workflows</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Sans+Condensed:wght@600&display=swap" rel="stylesheet">
+<style>
+/* Layout: sticky endpoint rail on the left, one card per endpoint on the right; each card = contract + flowchart. */
+:root {
+  --bg: #f4f6f8; --surface: #ffffff; --ink: #13202c; --muted: #586674; --line: #d6dde4;
+  --accent: #0a6b96;
+  --ai: #6747c7; --data: #0d7a60; --sec: #0a6b96; --fail: #b42318; --warn: #9a5b00; --ok: #1e7b3c;
+  --display: "IBM Plex Sans Condensed", "Arial Narrow", sans-serif;
+  --body: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --mono: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0e141a; --surface: #151d25; --ink: #e4ebf1; --muted: #98a6b3; --line: #29343f;
+    --accent: #5cb8e4; --ai: #a996f2; --data: #4ec9a5; --sec: #5cb8e4; --fail: #f3877e; --warn: #f0b55e; --ok: #72d491;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0e141a; --surface: #151d25; --ink: #e4ebf1; --muted: #98a6b3; --line: #29343f;
+  --accent: #5cb8e4; --ai: #a996f2; --data: #4ec9a5; --sec: #5cb8e4; --fail: #f3877e; --warn: #f0b55e; --ok: #72d491;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+@media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
+body { margin: 0; background: var(--bg); color: var(--ink); font: 15px/1.6 var(--body); }
+a { color: var(--accent); }
+a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 3px; }
+code, pre { font-family: var(--mono); }
+.wrap { display: grid; grid-template-columns: 250px minmax(0, 1fr); gap: 32px; max-width: 1180px; margin: 0 auto; padding: 0 20px; }
+nav.rail { position: sticky; top: 0; align-self: start; max-height: 100vh; overflow-y: auto; padding: 28px 0; }
+nav.rail ul { list-style: none; margin: 0; padding: 0; }
+nav.rail li.g { font: 600 11px/1 var(--display); letter-spacing: .08em; text-transform: uppercase; color: var(--muted); margin: 18px 0 6px; }
+nav.rail li.g:first-child { margin-top: 0; }
+nav.rail a { display: flex; gap: 8px; align-items: center; padding: 4px 6px; border-radius: 6px; text-decoration: none; color: var(--ink); font: 12.5px/1.35 var(--mono); }
+nav.rail a span { overflow-wrap: anywhere; }
+nav.rail a:hover { background: color-mix(in srgb, var(--accent) 10%, transparent); }
+main { padding: 28px 0 80px; min-width: 0; }
+h1 { font: 600 34px/1.1 var(--display); margin: 0 0 8px; text-wrap: balance; letter-spacing: -.01em; }
+.lede { color: var(--muted); max-width: 66ch; margin: 0 0 20px; }
+.lede code { color: var(--ink); }
+h2.grp { font: 600 13px/1 var(--display); letter-spacing: .09em; text-transform: uppercase; color: var(--muted); margin: 44px 0 14px; padding-bottom: 8px; border-bottom: 1px solid var(--line); }
+.panel { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 18px 20px; margin-bottom: 18px; }
+.panel h2 { font: 600 18px/1.2 var(--display); margin: 0 0 4px; }
+.panel p { margin: 0 0 12px; color: var(--muted); max-width: 70ch; }
+.legend { display: flex; flex-wrap: wrap; gap: 10px 18px; font-size: 13px; color: var(--muted); margin-top: 6px; }
+.legend span { display: inline-flex; align-items: center; gap: 7px; }
+.sw { width: 14px; height: 14px; border-radius: 4px; border: 1.5px solid; }
+.sw.io { border-color: var(--muted); background: var(--surface); }
+.sw.sec { border-color: var(--sec); background: color-mix(in srgb, var(--sec) 12%, var(--surface)); }
+.sw.data { border-color: var(--data); background: color-mix(in srgb, var(--data) 12%, var(--surface)); }
+.sw.ai { border-color: var(--ai); background: color-mix(in srgb, var(--ai) 12%, var(--surface)); }
+.sw.logic { border-color: var(--muted); background: color-mix(in srgb, var(--muted) 10%, var(--surface)); border-style: dashed; }
+.sw.fail { border-color: var(--fail); background: color-mix(in srgb, var(--fail) 12%, var(--surface)); }
+.sw.warn { border-color: var(--warn); background: color-mix(in srgb, var(--warn) 12%, var(--surface)); }
+.sw.end { border-color: var(--ok); background: color-mix(in srgb, var(--ok) 14%, var(--surface)); }
+table { width: 100%; border-collapse: collapse; font-size: 13.5px; }
+th, td { text-align: left; padding: 7px 10px 7px 0; border-bottom: 1px solid var(--line); vertical-align: middle; }
+th { font: 600 11px/1 var(--display); letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
+td.c-n { font: 12px var(--mono); color: var(--muted); font-variant-numeric: tabular-nums; width: 2.5em; }
+td a { text-decoration: none; }
+td code { font-size: 12.5px; }
+.tbl { overflow-x: auto; }
+.m { display: inline-block; min-width: 42px; text-align: center; font: 500 11px/1 var(--mono); padding: 4px 6px; border-radius: 4px; flex: none; }
+.m-get { color: var(--data); background: color-mix(in srgb, var(--data) 14%, transparent); }
+.m-post { color: var(--accent); background: color-mix(in srgb, var(--accent) 14%, transparent); }
+.auth { font: 500 11px/1 var(--body); padding: 4px 8px; border-radius: 999px; border: 1px solid; white-space: nowrap; }
+.a-pub { color: var(--muted); border-color: var(--line); }
+.a-jwt { color: var(--sec); border-color: color-mix(in srgb, var(--sec) 45%, transparent); }
+.a-adm { color: var(--warn); border-color: color-mix(in srgb, var(--warn) 50%, transparent); }
+article.ep { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 18px 20px 14px; margin-bottom: 18px; scroll-margin-top: 16px; }
+.ep-h { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
+.num { font: 12px var(--mono); color: var(--muted); font-variant-numeric: tabular-nums; }
+.path { font-size: 15px; font-weight: 500; overflow-wrap: anywhere; }
+article h3 { font: 600 20px/1.2 var(--display); margin: 10px 0 4px; }
+.sum { margin: 0 0 14px; max-width: 72ch; }
+.io { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 8px; }
+.io > div { min-width: 0; }
+.lab { display: block; font: 600 11px/1 var(--display); letter-spacing: .08em; text-transform: uppercase; color: var(--muted); margin-bottom: 6px; }
+pre { margin: 0; padding: 10px 12px; background: color-mix(in srgb, var(--muted) 8%, var(--surface)); border: 1px solid var(--line); border-radius: 7px; font-size: 12.5px; line-height: 1.5; white-space: pre-wrap; overflow-wrap: anywhere; }
+figure { margin: 12px 0 0; }
+.scroll { overflow-x: auto; }
+figure svg { display: block; width: 100%; max-width: 720px; min-width: 560px; height: auto; margin: 0 auto; }
+figcaption { font-size: 12.5px; color: var(--muted); margin-top: 8px; }
+figcaption code { color: var(--ink); }
+/* flowchart marks */
+.n { stroke-width: 1.4; }
+.k-io { fill: var(--surface); stroke: var(--muted); }
+.k-sec { fill: color-mix(in srgb, var(--sec) 10%, var(--surface)); stroke: var(--sec); }
+.k-data { fill: color-mix(in srgb, var(--data) 10%, var(--surface)); stroke: var(--data); }
+.k-ai { fill: color-mix(in srgb, var(--ai) 10%, var(--surface)); stroke: var(--ai); }
+.k-logic { fill: color-mix(in srgb, var(--muted) 8%, var(--surface)); stroke: var(--muted); stroke-dasharray: 5 3; }
+.k-fail { fill: color-mix(in srgb, var(--fail) 10%, var(--surface)); stroke: var(--fail); }
+.k-warn { fill: color-mix(in srgb, var(--warn) 10%, var(--surface)); stroke: var(--warn); }
+.k-end { fill: color-mix(in srgb, var(--ok) 13%, var(--surface)); stroke: var(--ok); }
+.tt { fill: var(--ink); font: 600 13px var(--body); }
+.ts { fill: var(--muted); font: 400 11.5px var(--body); }
+.tl { font: 500 10.5px var(--body); }
+.tl.fail { fill: var(--fail); } .tl.warn { fill: var(--warn); }
+.ln { fill: none; stroke: var(--muted); stroke-width: 1.3; }
+.ln.fail { stroke: var(--fail); stroke-dasharray: 4 3; } .ln.warn { stroke: var(--warn); stroke-dasharray: 4 3; }
+.ah { fill: var(--muted); } .ah.fail { fill: var(--fail); } .ah.warn { fill: var(--warn); }
+.pipe text.pt { fill: var(--ink); font: 600 12.5px var(--body); }
+.pipe text.pe { fill: var(--fail); font: 500 11px var(--mono); }
+@media (max-width: 860px) {
+  .wrap { grid-template-columns: 1fr; gap: 0; }
+  nav.rail { display: none; }
+  .io { grid-template-columns: 1fr; }
+  h1 { font-size: 28px; }
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+<nav class="rail" aria-label="Endpoints">
+<ul>
+<li class="g">Platform</li>
+<li><a href="#health"><span class="m m-get">GET</span><span>/health</span></a></li>
+<li class="g">Auth</li>
+<li><a href="#login"><span class="m m-post">POST</span><span>/auth/login</span></a></li>
+<li><a href="#me"><span class="m m-get">GET</span><span>/customers/me</span></a></li>
+<li class="g">Accounts</li>
+<li><a href="#accounts"><span class="m m-get">GET</span><span>/accounts</span></a></li>
+<li><a href="#balance"><span class="m m-get">GET</span><span>/accounts/{account_no}/balance</span></a></li>
+<li><a href="#transactions"><span class="m m-get">GET</span><span>/accounts/{account_no}/transactions</span></a></li>
+<li class="g">Transfers</li>
+<li><a href="#transfer"><span class="m m-post">POST</span><span>/transfers</span></a></li>
+<li class="g">Loans</li>
+<li><a href="#loan-eligibility"><span class="m m-post">POST</span><span>/loans/eligibility</span></a></li>
+<li><a href="#loans"><span class="m m-get">GET</span><span>/loans</span></a></li>
+<li class="g">Tickets</li>
+<li><a href="#ticket-create"><span class="m m-post">POST</span><span>/tickets</span></a></li>
+<li><a href="#ticket-status"><span class="m m-get">GET</span><span>/tickets/{ticket_id}</span></a></li>
+<li class="g">RAG</li>
+<li><a href="#rag-ingest"><span class="m m-post">POST</span><span>/rag/ingest</span></a></li>
+<li><a href="#rag-query"><span class="m m-post">POST</span><span>/rag/query</span></a></li>
+<li class="g">Agent</li>
+<li><a href="#agent-chat"><span class="m m-post">POST</span><span>/agent/chat</span></a></li>
+<li><a href="#agent-approve"><span class="m m-post">POST</span><span>/agent/approve</span></a></li>
+<li class="g">MCP</li>
+<li><a href="#mcp-tools"><span class="m m-get">GET</span><span>/mcp/tools</span></a></li>
+</ul>
+</nav>
+<main>
+<h1>SecureBank AI API workflows</h1>
+<p class="lede">How each of the 16 REST endpoints under <code>/api/v1</code> handles a request, step by step, as implemented in the FastAPI source. The language model is Google Gemini (<code>gemini-3.5-flash</code>, embeddings <code>gemini-embedding-001</code>); MySQL is the system of record.</p>
+
+<section class="panel" aria-labelledby="pipe-h">
+<h2 id="pipe-h">Every request</h2>
+<p>All endpoints share this path. Validation errors stop at FastAPI before any business code runs; business-rule failures are raised as <code>BankingError</code> and turned into a JSON error with the right status by one handler in <code>app/main.py</code>.</p>
+<div class="scroll">
+<svg class="pipe" viewBox="0 0 720 112" role="img" aria-label="Shared request pipeline: client, FastAPI validation, JWT dependency, router, banking service, MySQL" style="display:block;width:100%;max-width:720px;min-width:560px;height:auto">
+<defs><marker id="pa" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M1 1L9 5L1 9z" class="ah"/></marker></defs>
+<rect class="n k-io" x="4" y="14" width="102" height="44" rx="7"/><text class="pt" x="55" y="40" text-anchor="middle">Client</text>
+<rect class="n k-sec" x="130" y="14" width="126" height="44" rx="7"/><text class="pt" x="193" y="40" text-anchor="middle">Pydantic check</text>
+<rect class="n k-sec" x="280" y="14" width="126" height="44" rx="7"/><text class="pt" x="343" y="40" text-anchor="middle">JWT dependency</text>
+<rect class="n k-io" x="430" y="14" width="84" height="44" rx="7"/><text class="pt" x="472" y="40" text-anchor="middle">Router</text>
+<rect class="n k-data" x="538" y="14" width="178" height="44" rx="7"/><text class="pt" x="627" y="40" text-anchor="middle">banking_service → MySQL</text>
+<path class="ln" d="M106 36 H128" marker-end="url(#pa)"/>
+<path class="ln" d="M256 36 H278" marker-end="url(#pa)"/>
+<path class="ln" d="M406 36 H428" marker-end="url(#pa)"/>
+<path class="ln" d="M514 36 H536" marker-end="url(#pa)"/>
+<text class="pe" x="193" y="80" text-anchor="middle">422 bad input</text>
+<text class="pe" x="343" y="80" text-anchor="middle">401 token · 403 role</text>
+<text class="pe" x="627" y="80" text-anchor="middle">400 403 404 409 422</text>
+<text class="pe" x="627" y="98" text-anchor="middle">via BankingError</text>
+</svg>
+</div>
+<div class="legend" aria-label="Legend">
+<span><i class="sw io"></i>Request / response</span>
+<span><i class="sw sec"></i>Validation and security</span>
+<span><i class="sw data"></i>MySQL</span>
+<span><i class="sw ai"></i>Gemini, LangGraph, RAG, MCP</span>
+<span><i class="sw logic"></i>Business rule in code</span>
+<span><i class="sw fail"></i>Error exit</span>
+<span><i class="sw warn"></i>Early return, not an error</span>
+<span><i class="sw end"></i>Success</span>
+</div>
+</section>
+
+<section class="panel" aria-labelledby="idx-h">
+<h2 id="idx-h">All endpoints</h2>
+<div class="tbl">
+<table>
+<thead><tr><th>#</th><th>Method</th><th>Path</th><th>Auth</th><th>Purpose</th></tr></thead>
+<tbody>
+<tr><td class="c-n">01</td><td><span class="m m-get">GET</span></td><td><a href="#health"><code>/health</code></a></td><td><span class="auth a-pub">Public</span></td><td>Health check</td></tr>
+<tr><td class="c-n">02</td><td><span class="m m-post">POST</span></td><td><a href="#login"><code>/auth/login</code></a></td><td><span class="auth a-pub">Public</span></td><td>Log in</td></tr>
+<tr><td class="c-n">03</td><td><span class="m m-get">GET</span></td><td><a href="#me"><code>/customers/me</code></a></td><td><span class="auth a-jwt">Bearer JWT</span></td><td>My profile</td></tr>
+<tr><td class="c-n">04</td><td><span class="m m-get">GET</span></td><td><a href="#accounts"><code>/accounts</code></a></td><td><span class="auth a-jwt">Bearer JWT</span></td><td>List my accounts</td></tr>
+<tr><td class="c-n">05</td><td><span class="m m-get">GET</span></td><td><a href="#balance"><code>/accounts/{account_no}/balance</code></a></td><td><span class="auth a-jwt">Bearer JWT</span></td><td>Account balance</td></tr>
+<tr><td class="c-n">06</td><td><span class="m m-get">GET</span></td><td><a href="#transactions"><code>/accounts/{account_no}/transactions</code></a></td><td><span class="auth a-jwt">Bearer JWT</span></td><td>Account transactions</td></tr>
+<tr><td class="c-n">07</td><td><span class="m m-post">POST</span></td><td><a href="#transfer"><code>/transfers</code></a></td><td><span class="auth a-jwt">Bearer JWT</span></td><td>Fund transfer</td></tr>
+<tr><td class="c-n">08</td><td><span class="m m-post">POST</span></td><td><a href="#loan-eligibility"><code>/loans/eligibility</code></a></td><td><span class="auth a-jwt">Bearer JWT</span></td><td>Loan eligibility + EMI</td></tr>
+<tr><td class="c-n">09</td><td><span class="m m-get">GET</span></td><td><a href="#loans"><code>/loans</code></a></td><td><span class="auth a-jwt">Bearer JWT</span></td><td>My loans</td></tr>
+<tr><td class="c-n">10</td><td><span class="m m-post">POST</span></td><td><a href="#ticket-create"><code>/tickets</code></a></td><td><span class="auth a-jwt">Bearer JWT</span></td><td>Raise dispute ticket</td></tr>
+<tr><td class="c-n">11</td><td><span class="m m-get">GET</span></td><td><a href="#ticket-status"><code>/tickets/{ticket_id}</code></a></td><td><span class="auth a-jwt">Bearer JWT</span></td><td>Ticket status</td></tr>
+<tr><td class="c-n">12</td><td><span class="m m-post">POST</span></td><td><a href="#rag-ingest"><code>/rag/ingest</code></a></td><td><span class="auth a-adm">Admin JWT</span></td><td>Ingest policies</td></tr>
+<tr><td class="c-n">13</td><td><span class="m m-post">POST</span></td><td><a href="#rag-query"><code>/rag/query</code></a></td><td><span class="auth a-jwt">Bearer JWT</span></td><td>Policy Q&amp;A</td></tr>
+<tr><td class="c-n">14</td><td><span class="m m-post">POST</span></td><td><a href="#agent-chat"><code>/agent/chat</code></a></td><td><span class="auth a-jwt">Bearer JWT</span></td><td>LangGraph assistant</td></tr>
+<tr><td class="c-n">15</td><td><span class="m m-post">POST</span></td><td><a href="#agent-approve"><code>/agent/approve</code></a></td><td><span class="auth a-jwt">Bearer JWT</span></td><td>Approve transfer</td></tr>
+<tr><td class="c-n">16</td><td><span class="m m-get">GET</span></td><td><a href="#mcp-tools"><code>/mcp/tools</code></a></td><td><span class="auth a-jwt">Bearer JWT</span></td><td>List MCP tools</td></tr>
+</tbody>
+</table>
+</div>
+</section>
+
+<h2 class="grp">Platform</h2>
+
+<article class="ep" id="health">
+  <header class="ep-h">
+    <span class="num">01</span>
+    <span class="m m-get">GET</span>
+    <code class="path">/api/v1/health</code>
+    <span class="auth a-pub">Public</span>
+  </header>
+  <h3>Health check</h3>
+  <p class="sum">Liveness and database check that load balancers and monitors call first. It never fails with an error: a database problem is reported in the body.</p>
+  <div class="io">
+    <div><span class="lab">Request</span><pre>No body, no token.</pre></div>
+    <div><span class="lab">Success</span><pre>200 {&quot;status&quot;: &quot;ok&quot; | &quot;degraded&quot;, &quot;app&quot;, &quot;database&quot;: &quot;up&quot; | &quot;down: …&quot;, &quot;llm_model&quot;: &quot;gemini-3.5-flash&quot;}</pre></div>
+  </div>
+  <figure>
+    <div class="scroll"><svg viewBox="0 0 720 314" role="img" aria-label="GET /health workflow"><defs><marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M1 1L9 5L1 9z" class="ah"/></marker><marker id="af" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M1 1L9 5L1 9z" class="ah fail"/></marker><marker id="aw" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M1 1L9 5L1 9z" class="ah warn"/></marker></defs><rect class="n k-io" x="24" y="16" width="330" height="48" rx="7"/><text class="tt" x="189.0" y="36.0" text-anchor="middle">GET /api/v1/health</text><text class="ts" x="189.0" y="53.0" text-anchor="middle">No auth required</text><path class="ln" d="M189.0 64 V92" marker-end="url(#a)"/><rect class="n k-data" x="24" y="94" width="330" height="48" rx="7"/><text class="tt" x="189.0" y="114.0" text-anchor="middle">Open DB session</text><text class="ts" x="189.0" y="131.0" text-anchor="middle">get_db() dependency</text><path class="ln" d="M189.0 142 V170" marker-end="url(#a)"/><rect class="n k-data" x="24" y="172" width="330" height="48" rx="7"/><text class="tt" x="189.0" y="192.0" text-anchor="middle">Run SELECT 1</text><text class="ts" x="189.0" y="209.0" text-anchor="middle">Ping MySQL</text><path class="ln warn" d="M354 196.0 H430" marker-end="url(#aw)"/><text class="tl warn" x="393.0" y="190.0" text-anchor="middle">short-circuit</text><rect class="n k-warn" x="432" y="172.0" width="264" height="48" rx="7"/><text class="tt" x="564.0" y="192.0" text-anchor="middle">200 status: degraded</text><text class="ts" x="564.0" y="209.0" text-anchor="middle">database: down: &lt;ErrorType&gt;</text><path class="ln" d="M189.0 220 V248" marker-end="url(#a)"/><rect class="n k-end" x="24" y="250" width="330" height="48" rx="7"/><text class="tt" x="189.0" y="270.0" text-anchor="middle">200 OK</text><text class="ts" x="189.0" y="287.0" text-anchor="middle">status ok, database up, model name</text></svg></div>
+    <figcaption>Source: <code>app/routers/health.py</code></figcaption>
+  </figure>
+</article>
+<h2 class="grp">Auth</h2>
+
+<article class="ep" id="login">
+  <header class="ep-h">
+    <span class="num">02</span>
+    <span class="m m-post">POST</span>
+    <code class="path">/api/v1/auth/login</code>
+    <span class="auth a-pub">Public</span>
+  </header>
+  <h3>Log in</h3>
+  <p class="sum">Exchanges email and password for a signed JWT. The same error is returned for an unknown email and a wrong password, so the API never reveals which emails exist.</p>
+  <div class="io">
+    <div><span class="lab">Request</span><pre>{&quot;email&quot;: &quot;aarav@securebank.test&quot;, &quot;password&quot;: &quot;Password@123&quot;}</pre></div>
+    <div><span class="lab">Success</span><pre>200 {&quot;access_token&quot;, &quot;token_type&quot;: &quot;bearer&quot;, &quot;expires_in&quot;: 3600, &quot;customer_id&quot;, &quot;role&quot;}</pre></div>
+  </div>
+  <figure>
+    <div class="scroll"><svg viewBox="0 0 720 556" role="img" aria-label="POST /auth/login workflow"><defs><marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M1 1L9 5L1 9z" class="ah"/></marker><marker id="af" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M1 1L9 5L1 9z" class="ah fail"/></marker><marker id="aw" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M1 1L9 5L1 9z" class="ah warn"/></marker></defs><rect class="n k-io" x="24" y="16" width="330" height="48" rx="7"/><text class="tt" x="189.0" y="36.0" text-anchor="middle">POST /api/v1/auth/login</text><text class="ts" x="189.0" y="53.0" text-anchor="middle">email + password</text><path class="ln" d="M189.0 64 V92" marker-end="url(#a)"/><rect class="n k-sec" x="24" y="94" width="330" height="48" rx="7"/><text class="tt" x="189.0" y="114.0" text-anchor="middle">Validate body</text><text class="ts" x="189.0" y="131.0" text-anchor="middle">Email pattern, password ≥ 6 chars</text><path class="ln fail" d="M354 118.0 H430" marker-end="url(#af)"/><text class="tl fail" x="393.0" y="112.0" text-anchor="middle">fails</text><rect class="n k-fail" x="432" y="94.0" width="264" height="48" rx="7"/><text class="tt" x="564.0" y="114.0" text-anchor="middle">422 Unprocessable</text><text class="ts" x="564.0" y="131.0" text-anchor="middle">Pydantic validation error</text><path class="ln" d="M189.0 142 V170" marker-end="url(#a)"/><rect class="n k-data" x="24" y="172" width="330" height="48" rx="7"/><text class="tt" x="189.0" y="192.0" text-anchor="middle">Find customer by email</text><text class="ts" x="189.0" y="209.0" text-anchor="middle">SELECT customers WHERE email</text><path class="ln" d="M189.0 220 V248" marker-end="url(#a)"/><rect class="n k-sec" x="24" y="250" width="330" height="48" rx="7"/><text class="tt" x="189.0" y="270.0" text-anchor="middle">bcrypt.checkpw(password)</text><text class="ts" x="189.0" y="287.0" text-anchor="middle">Compare with password_hash</text><path class="ln fail" d="M354 274.0 H430" marker-end="url(#af)"/><text class="tl fail" x="393.0" y="268.0" text-anchor="middle">fails</text><rect class="n k-fail" x="432" y="242.5" width="264" height="63" rx="7"/><text class="tt" x="564.0" y="262.5" text-anchor="middle">401 Unauthorized</text><text class="ts" x="564.0" y="279.5" text-anchor="middle">Invalid email or password · audit</text><text class="ts" x="564.0" y="294.5" text-anchor="middle">LOGIN_FAILED</text><path class="ln" d="M189.0 298 V333.5" marker-end="url(#a)"/><rect class="n k-data" x="24" y="335.5" width="330" height="48" rx="7"/><text class="tt" x="189.0" y="355.5" text-anchor="middle">Audit LOGIN, commit</text><text class="ts" x="189.0" y="372.5" text-anchor="middle">audit_logs row</text><path class="ln" d="M189.0 383.5 V411.5" marker-end="url(#a)"/><rect class="n k-sec" x="24" y="413.5" width="330" height="48" rx="7"/><text class="tt" x="189.0" y="433.5" text-anchor="middle">Sign JWT (HS256)</text><text class="ts" x="189.0" y="450.5" text-anchor="middle">sub=customer_id, role, exp=60 min</text><path class="ln" d="M189.0 461.5 V489.5" marker-end="url(#a)"/><rect class="n k-end" x="24" y="491.5" width="330" height="48" rx="7"/><text class="tt" x="189.0" y="511.5" text-anchor="middle">200 OK</text><text class="ts" x="189.0" y="528.5" text-anchor="middle">access_token + customer_id + role</text></svg></div>
+    <figcaption>Source: <code>app/routers/auth.py · app/security.py</code></figcaption>
+  </figure>
+</article>
+
+<article class="ep" id="me">
+  <header class="ep-h">
+    <span class="num">03</span>
+    <span class="m m-get">GET</span>
+    <code class="path">/api/v1/customers/me</code>
+    <span class="auth a-jwt">Bearer JWT</span>
+  </header>
+  <h3>My profile</h3>
+  <p class="sum">Returns the logged-in customer&#x27;s profile. The customer is resolved from the token&#x27;s sub claim; no ID is taken from the URL or body.</p>
+  <div class="io">
+    <div><span class="lab">Request</span><pre>Header Authorization: Bearer &lt;token&gt;</pre></div>
+    <div><span class="lab">Success</span><pre>200 {&quot;customer_id&quot;, &quot;full_name&quot;, &quot;email&quot;, &quot;phone&quot;, &quot;kyc_status&quot;, &quot;credit_score&quot;, &quot;monthly_income&quot;}</pre></div>
+  </div>
+  <figure>
+    <div class="scroll"><svg viewBox="0 0 720 314" role="img" aria-label="GET /customers/me workflow"><defs><marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M1 1L9 5L1 9z" class="ah"/></marker><marker id="af" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M1 1L9 5L1 9z" class="ah fail"/></marker><marker id="aw" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M1 1L9 5L1 9z" class="ah warn"/></marker></defs><rect class="n k-io" x="24" y="16" width="330" height="48" rx="7"/><text class="tt" x="189.0" y="36.0" text-anchor="middle">GET /api/v1/customers/me</text><text class="ts" x="189.0" y="53.0" text-anchor="middle">Bearer token</text><path class="ln" d="M189.0 64 V92" marker-end="url(#a)"/><rect class="n k-sec" x="24" y="94" width="330" height="48" rx="7"/><text class="tt" x="189.0" y="114.0" text-anchor="middle">Verify JWT (HTTPBearer)</text><text class="ts" x="189.0" y="131.0" text-anchor="middle">Signature, expiry, customer exists</text><path class="ln fail" d="M354 118.0 H430" marker-end="url(#af)"/><text class="tl fail" x="393.0" y="112.0" text-anchor="middle">fails</text><rect class="n k-fail" x="432" y="94.0" width="264" height="48" rx="7"/><text class="tt" x="564.0" y="114.0" text-anchor="middle">401 Unauthorized</text><text class="ts" x="564.0" y="131.0" text-anchor="middle">Invalid or expired token</text><path class="ln" d="M189.0 142 V170" marker-end="url(#a)"/><rect class="n k-data" x="24" y="172" width="330" height="48" rx="7"/><text class="tt" x="189.0" y="192.0" text-anchor="middle">Load customer by sub</text><text class="ts" x="189.0" y="209.0" text-anchor="middle">db.get(Customer, customer_id)</text><path class="ln" d="M189.0 220 V248" marker-end="url(#a)"/><rect class="n k-end" x="24" y="250" width="330" height="48" rx="7"/><text class="tt" x="189.0" y="270.0" text-anchor="middle">200 OK</text><text class="ts" x="189.0" y="287.0" text-anchor="middle">CustomerOut profile</text></svg></div>
+    <figcaption>Source: <code>app/routers/customers.py</code></figcaption>
+  </figure>
+</article>
+<h2 class="grp">Accounts</h2>
+
+<article class="ep" id="accounts">
+  <header class="ep-h">
+    <span class="num">04</span>
+    <span class="m m-get">GET</span>
+    <code class="path">/api/v1/accounts</code>
+    <span class="auth a-jwt">Bearer JWT</span>
+  </header>
+  <h3>List my accounts</h3>
+  <p class="sum">Lists only the caller&#x27;s accounts. The query is filtered by the customer_id from the token, so another customer&#x27;s accounts can never appear.</p>
+  <div class="io">
+    <div><span class="lab">Request</span><pre>Header Authorization: Bearer &lt;token&gt;</pre></div>
+    <div><span class="lab">Success</span><pre>200 [{&quot;account_no&quot;, &quot;account_type&quot;, &quot;balance&quot;, &quot;currency&quot;, &quot;status&quot;, &quot;daily_transfer_limit&quot;}]</pre></div>
+  </div>
+  <figure>
+    <div class="scroll"><svg viewBox="0 0 720 314" role="img" aria-label="GET /accounts workflow"><defs><marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M1 1L9 5L1 9z" class="ah"/></marker><marker id="af" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M1 1L9 5L1 9z" class="ah fail"/></marker><marker id="aw" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M1 1L9 5L1 9z" class="ah warn"/></marker></defs><rect class="n k-io" x="24" y="16" width="330" height="48" rx="7"/><text class="tt" x="189.0" y="36.0" text-anchor="middle">GET /api/v1/accounts</text><text class="ts" x="189.0" y="53.0" text-anchor="middle">Bearer token</text><path class="ln" d="M189.0 64 V92" marker-end="url(#a)"/><rect class="n k-sec" x="24" y="94" width="330" height="48" rx="7"/><text class="tt" x="189.0" y="114.0" text-anchor="middle">Verify JWT (HTTPBearer)</text><text class="ts" x="189.0" y="131.0" text-anchor="middle">Signature, expiry, customer exists</text><path class="ln fail" d="M354 118.0 H430" marker-end="url(#af)"/><text class="tl fail" x="393.0" y="112.0" text-anchor="middle">fails</text><rect class="n k-fail" x="432" y="94.0" width="264" height="48" rx="7"/><text class="tt" x="564.0" y="114.0" text-anchor="middle">401 Unauthorized</text><text class="ts" x="564.0" y="131.0" text-anchor="middle">Invalid or expired token</text><path class="ln" d="M189.0 142 V170" marker-end="url(#a)"/><rect class="n k-data" x="24" y="172" width="330" height="48" rx="7"/><text class="tt" x="189.0" y="192.0" text-anchor="middle">SELECT accounts</text><text class="ts" x="189.0" y="209.0" text-anchor="middle">WHERE customer_id = token.sub</text><path class="ln" d="M189.0 220 V248" marker-end="url(#a)"/><rect class="n k-end" x="24" y="250" width="330" height="48" rx="7"/><text class="tt" x="189.0" y="270.0" text-anchor="middle">200 OK</text><text class="ts" x="189.0" y="287.0" text-anchor="middle">List ordered by account_no</text></svg></div>
+    <figcaption>Source: <code>app/routers/accounts.py · banking_service.list_accounts</code></figcaption>
+  </figure>
+</article>
+
+<article class="ep" id="balance">
+  <header class="ep-h">
+    <span class="num">05</span>
+    <span class="m m-get">GET</span>
+    <code class="path">/api/v1/accounts/{account_no}/balance</code>
+    <span class="auth a-jwt">Bearer JWT</span>
+  </header>
+  <h3>Account balance</h3>
+  <p class="sum">Returns the balance of one account if the caller owns it. Someone else&#x27;s account returns 404, not 403, so its existence is not revealed.</p>
+  <div class="io">
+    <div><span class="lab">Request</span><pre>Path account_no, e.g. SB1001</pre></div>
+    <div><span class="lab">Success</span><pre>200 {&quot;account_no&quot;, &quot;balance&quot;, &quot;currency&quot;, &quot;status&quot;, &quot;as_of&quot;}</pre></div>
+  </div>
+  <figure>
+    <div class="scroll"><svg viewBox="0 0 720 314" role="img" aria-label="GET /accounts/{account_no}/balance workflow"><defs><marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M1 1L9 5L1 9z" class="ah"/></marker><marker id="af" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M1 1L9 5L1 9z" class="ah fail"/></marker><marker id="aw" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M1 1L9 5L1 9z" class="ah warn"/></marker></defs><rect class="n k-io" x="24" y="16" width="330" height="48" rx="7"/><text class="tt" x="189.0" y="36.0" text-anchor="middle">GET …/accounts/SB1001/balance</text><text class="ts" x="189.0" y="53.0" text-anchor="middle">Bearer token</text><path class="ln" d="M189.0 64 V92" marker-end="url(#a)"/><rect class="n k-sec" x="24" y="94" width="330" height="48" rx="7"/><text class="tt" x="189.0" y="114.0" text-anchor="middle">Verify JWT (HTTPBearer)</text><text class="ts" x="189.0" y="131.0" text-anchor="middle">Signature, expiry, customer exists</text><path class="ln fail" d="M354 118.0 H430" marker-end="url(#af)"/><text class="tl fail" x="393.0" y="112.0" text-anchor="middle">fails</text><rect class="n k-fail" x="432" y="94.0" width="264" height="48" rx="7"/><text class="tt" x="564.0" y="114.0" text-anchor="middle">401 Unauthorized</text><text class="ts" x="564.0" y="131.0" text-anchor="middle">Invalid or expired token</text><path class="ln" d="M189.0 142 V170" marker-end="url(#a)"/><rect class="n k-sec" x="24" y="172" width="330" height="48" rx="7"/><text class="tt" x="189.0" y="192.0" text-anchor="middle">get_owned_account()</text><text class="ts" x="189.0" y="209.0" text-anchor="middle">account_no AND customer_id match</text><path class="ln fail" d="M354 196.0 H430" marker-end="url(#af)"/><text class="tl fail" x="393.0" y="190.0" text-anchor="middle">fails</text><rect class="n k-fail" x="432" y="172.0" width="264" height="48" rx="7"/><text class="tt" x="564.0" y="192.0" text-anchor="middle">404 Not Found</text><text class="ts" x="564.0" y="209.0" text-anchor="middle">Account SB1001 not found</text><path class="ln" d="M189.0 220 V248" marker-end="url(#a)"/><rect class="n k-end" x="24" y="250" width="330" height="48" rx="7"/><text class="tt" x="189.0" y="270.0" text-anchor="middle">200 OK</text><text class="ts" x="189.0" y="287.0" text-anchor="middle">Balance, status, as_of timestamp</text></svg></div>
+    <figcaption>Source: <code>app/routers/accounts.py · banking_service.get_balance</code></figcaption>
+  </figure>
+</article>
+
+<article class="ep" id="transactions">
+  <header class="ep-h">
+    <span class="num">06</span>
+    <span class="m m-get">GET</span>
+    <code class="path">/api/v1/accounts/{account_no}/transactions</code>
+    <span class="auth a-jwt">Bearer JWT</span>
+  </header>
+  <h3>Account transactions</h3>
+  <p class="sum">Returns the latest ledger rows for one owned account, newest first, with optional CREDIT/DEBIT filter.</p>
+  <div class="io">
+    <div><span class="lab">Request</span><pre>Path account_no · Query limit=10 (1–100), txn_type=CREDIT|DEBIT (optional)</pre></div>
+    <div><span class="lab">Success</span><pre>200 [{&quot;txn_id&quot;, &quot;txn_type&quot;, &quot;amount&quot;, &quot;description&quot;, &quot;counterparty_account&quot;, &quot;reference_no&quot;, &quot;status&quot;, &quot;created_at&quot;}]</pre></div>
+  </div>
+  <figure>
+    <div class="scroll"><svg viewBox="0 0 720 470" role="img" aria-label="GET /accounts/{account_no}/transactions workflow"><defs><marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M1 1L9 5L1 9z" class="ah"/></marker><marker id="af" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M1 1L9 5L1 9z" class="ah fail"/></marker><marker id="aw" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M1 1L9 5L1 9z" class="ah warn"/></marker></defs><rect class="n k-io" x="24" y="16" width="330" height="48" rx="7"/><text class="tt" x="189.0" y="36.0" text-anchor="middle">GET …/SB1001/transactions</text><text class="ts" x="189.0" y="53.0" text-anchor="middle">?limit=10&amp;txn_type=DEBIT</text><path class="ln" d="M189.0 64 V92" marker-end="url(#a)"/><rect class="n k-sec" x="24" y="94" width="330" height="48" rx="7"/><text class="tt" x="189.0" y="114.0" text-anchor="middle">Validate query params</text><text class="ts" x="189.0" y="131.0" text-anchor="middle">limit 1–100, txn_type enum</text><path class="ln fail" d="M354 118.0 H430" marker-end="url(#af)"/><text class="tl fail" x="393.0" y="112.0" text-anchor="middle">fails</text><rect class="n k-fail" x="432" y="94.0" width="264" height="48" rx="7"/><text class="tt" x="564.0" y="114.0" text-anchor="middle">422 Unprocessable</text><text class="ts" x="564.0" y="131.0" text-anchor="middle">Bad limit or txn_type</text><path class="ln" d="M189.0 142 V170" marker-end="url(#a)"/><rect class="n k-sec" x="24" y="172" width="330" height="48" rx="7"/><text class="tt" x="189.0" y="192.0" text-anchor="middle">Verify JWT (HTTPBearer)</text><text class="ts" x="189.0" y="209.0" text-anchor="middle">Signature, expiry, customer exists</text><path class="ln fail" d="M354 196.0 H430" marker-end="url(#af)"/><text class="tl fail" x="393.0" y="190.0" text-anchor="middle">fails</text><rect class="n k-fail" x="432" y="172.0" width="264" height="48" rx="7"/><text class="tt" x="564.0" y="192.0" text-anchor="middle">401 Unauthorized</text><text class="ts" x="564.0" y="209.0" text-anchor="middle">Invalid or expired token</text><path class="ln" d="M189.0 220 V248" marker-end="url(#a)"/><rect class="n k-sec" x="24" y="250" width="330" height="48" rx="7"/><text class="tt" x="189.0" y="270.0" text-anchor="middle">get_owned_account()</text><text class="ts" x="189.0" y="287.0" text-anchor="middle">Ownership check</text><path class="ln fail" d="M354 274.0 H430" marker-end="url(#af)"/><text class="tl fail" x="393.0" y="268.0" text-anchor="middle">fails</text><rect class="n k-fail" x="432" y="250.0" width="264" height="48" rx="7"/><text class="tt" x="564.0" y="270.0" text-anchor="middle">404 Not Found</text><text class="ts" x="564.0" y="287.0" text-anchor="middle">Account not found</text><path class="ln" d="M189.0 298 V326" marker-end="url(#a)"/><rect class="n k-data" x="24" y="328" width="330" height="48" rx="7"/><text class="tt" x="189.0" y="348.0" text-anchor="middle">SELECT transactions</text><text class="ts" x="189.0" y="365.0" text-anchor="middle">Filter type, ORDER BY created_at DESC, LIMIT</text><path class="ln" d="M189.0 376 V404" marker-end="url(#a)"/><rect class="n k-end" x="24" y="406" width="330" height="48" rx="7"/><text class="tt" x="189.0" y="426.0" text-anchor="middle">200 OK</text><text class="ts" x="189.0" y="443.0" text-anchor="middle">List of TransactionOut</text></svg></div>
+    <figcaption>Source: <code>app/routers/accounts.py · banking_service.get_transactions</code></figcaption>
+  </figure>
+</article>
+<h2 class="grp">Transfers</h2>
+
+<article class="ep" id="transfer">
+  <header class="ep-h">
+    <span class="num">07</span>
+    <span class="m m-post">POST</span>
+    <code class="path">/api/v1/transfers</code>
+    <span class="auth a-jwt">Bearer JWT</span>
+  </header>
+  <h3>Fund transfer</h3>
+  <p class="sum">Moves money atomically. A repeated Idempotency-Key returns the first result instead of debiting twice; both rows are locked in sorted order so opposite transfers cannot deadlock; every rule is re-checked under the lock.</p>
+  <div class="io">
+    <div><span class="lab">Request</span><pre>Header Idempotency-Key (8–64 chars) · {&quot;from_account&quot;: &quot;SB1001&quot;, &quot;to_account&quot;: &quot;SB1002&quot;, &quot;amount&quot;: 2000, &quot;remarks&quot;: &quot;Dinner&quot;}</pre></div>
+    <div><span class="lab">Success</span><pre>201 {&quot;reference_no&quot;: &quot;TXN…&quot;, &quot;status&quot;: &quot;SUCCESS&quot;, &quot;from_account&quot;, &quot;to_account&quot;, &quot;amount&quot;, &quot;new_balance&quot;, &quot;message&quot;}</pre></div>
+  </div>
+  <figure>
+    <div class="scroll"><svg viewBox="0 0 720 797" role="img" aria-label="POST /transfers workflow"><defs><marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M1 1L9 5L1 9z" class="ah"/></marker><marker id="af" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M1 1L9 5L1 9z" class="ah fail"/></marker><marker id="aw" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M1 1L9 5L1 9z" class="ah warn"/></marker></defs><rect class="n k-io" x="24" y="16" width="330" height="48" rx="7"/><text class="tt" x="189.0" y="36.0" text-anchor="middle">POST /api/v1/transfers</text><text class="ts" x="189.0" y="53.0" text-anchor="middle">Body + Idempotency-Key header</text><path class="ln" d="M189.0 64 V92" marker-end="url(#a)"/><rect class="n k-sec" x="24" y="94" width="330" height="48" rx="7"/><text class="tt" x="189.0" y="114.0" text-anchor="middle">Validate body + header</text><text class="ts" x="189.0" y="131.0" text-anchor="middle">amount &gt; 0, 2 decimals, key 8–64</text><path class="ln fail" d="M354 118.0 H430" marker-end="url(#af)"/><text class="tl fail" x="393.0" y="112.0" text-anchor="middle">fails</text><rect class="n k-fail" x="432" y="94.0" width="264" height="48" rx="7"/><text class="tt" x="564.0" y="114.0" text-anchor="middle">422 Unprocessable</text><text class="ts" x="564.0" y="131.0" text-anchor="middle">Missing key or bad amount</text><path class="ln" d="M189.0 142 V170" marker-end="url(#a)"/><rect class="n k-sec" x="24" y="172" width="330" height="48" rx="7"/><text class="tt" x="189.0" y="192.0" text-anchor="middle">Verify JWT (HTTPBearer)</text><text class="ts" x="189.0" y="209.0" text-anchor="middle">Signature, expiry, customer exists</text><path class="ln fail" d="M354 196.0 H430" marker-end="url(#af)"/><text class="tl fail" x="393.0" y="190.0" text-anchor="middle">fails</text><rect class="n k-fail" x="432" y="172.0" width="264" height="48" rx="7"/><text class="tt" x="564.0" y="192.0" text-anchor="middle">401 Unauthorized</text><text class="ts" x="564.0" y="209.0" text-anchor="middle">Invalid or expired token</text><path class="ln" d="M189.0 220 V248" marker-end="url(#a)"/><rect class="n k-data" x="24" y="250" width="330" height="48" rx="7"/><text class="tt" x="189.0" y="270.0" text-anchor="middle">Idempotency key seen?</text><text class="ts" x="189.0" y="287.0" text-anchor="middle">Key scoped as customer_id:key</text><path class="ln warn" d="M354 274.0 H430" marker-end="url(#aw)"/><text class="tl warn" x="393.0" y="268.0" text-anchor="middle">short-circuit</text><rect class="n k-warn" x="432" y="250.0" width="264" height="48" rx="7"/><text class="tt" x="564.0" y="270.0" text-anchor="middle">201 stored result</text><text class="ts" x="564.0" y="287.0" text-anchor="middle">Same response, no second debit</text><path class="ln" d="M189.0 298 V326" marker-end="url(#a)"/><rect class="n k-data" x="24" y="328" width="330" height="48" rx="7"/><text class="tt" x="189.0" y="348.0" text-anchor="middle">Lock both rows</text><text class="ts" x="189.0" y="365.0" text-anchor="middle">SELECT … FOR UPDATE, sorted order</text><path class="ln" d="M189.0 376 V404" marker-end="url(#a)"/><rect class="n k-sec" x="24" y="406" width="330" height="48" rx="7"/><text class="tt" x="189.0" y="426.0" text-anchor="middle">Request + identity rules</text><text class="ts" x="189.0" y="443.0" text-anchor="middle">Amount, accounts differ, KYC, ownership</text><path class="ln fail" d="M354 430.0 H430" marker-end="url(#af)"/><text class="tl fail" x="393.0" y="424.0" text-anchor="middle">fails</text><rect class="n k-fail" x="432" y="398.5" width="264" height="63" rx="7"/><text class="tt" x="564.0" y="418.5" text-anchor="middle">400 / 403 / 404</text><text class="ts" x="564.0" y="435.5" text-anchor="middle">Bad amount · KYC not verified · not</text><text class="ts" x="564.0" y="450.5" text-anchor="middle">found · rollback</text><path class="ln" d="M189.0 454 V489.5" marker-end="url(#a)"/><rect class="n k-sec" x="24" y="491.5" width="330" height="48" rx="7"/><text class="tt" x="189.0" y="511.5" text-anchor="middle">Account + money rules</text><text class="ts" x="189.0" y="528.5" text-anchor="middle">Both ACTIVE, balance, daily limit</text><path class="ln fail" d="M354 515.5 H430" marker-end="url(#af)"/><text class="tl fail" x="393.0" y="509.5" text-anchor="middle">fails</text><rect class="n k-fail" x="432" y="484.0" width="264" height="63" rx="7"/><text class="tt" x="564.0" y="504.0" text-anchor="middle">409 / 422</text><text class="ts" x="564.0" y="521.0" text-anchor="middle">Account frozen · insufficient · limit</text><text class="ts" x="564.0" y="536.0" text-anchor="middle">· rollback</text><path class="ln" d="M189.0 539.5 V575.0" marker-end="url(#a)"/><rect class="n k-data" x="24" y="577.0" width="330" height="48" rx="7"/><text class="tt" x="189.0" y="597.0" text-anchor="middle">Debit + credit</text><text class="ts" x="189.0" y="614.0" text-anchor="middle">2 ledger rows, shared TXN reference</text><path class="ln" d="M189.0 625.0 V653.0" marker-end="url(#a)"/><rect class="n k-data" x="24" y="655.0" width="330" height="48" rx="7"/><text class="tt" x="189.0" y="675.0" text-anchor="middle">Audit + idempotency, COMMIT</text><text class="ts" x="189.0" y="692.0" text-anchor="middle">audit TRANSFER, store response</text><path class="ln" d="M189.0 703.0 V731.0" marker-end="url(#a)"/><rect class="n k-end" x="24" y="733.0" width="330" height="48" rx="7"/><text class="tt" x="189.0" y="753.0" text-anchor="middle">201 Created</text><text class="ts" x="189.0" y="770.0" text-anchor="middle">reference_no + new_balance</text></svg></div>
+    <figcaption>Source: <code>app/routers/transfers.py · banking_service.transfer</code></figcaption>
+  </figure>
+</article>
+<h2 class="grp">Loans</h2>
+
+<article class="ep" id="loan-eligibility">
+  <header class="ep-h">
+    <span class="num">08</span>
+    <span class="m m-post">POST</span>
+    <code class="path">/api/v1/loans/eligibility</code>
+    <span class="auth a-jwt">Bearer JWT</span>
+  </header>
+  <h3>Loan eligibility + EMI</h3>
+  <p class="sum">Rule-based decision, no LLM. A rejection is a normal 200 answer with decision REJECTED and the reasons, not an error.</p>
+  <div class="io">
+    <div><span class="lab">Request</span><pre>{&quot;loan_type&quot;: &quot;PERSONAL&quot; | &quot;HOME&quot; | &quot;CAR&quot;, &quot;amount&quot;: 500000, &quot;tenure_months&quot;: 36}</pre></div>
+    <div><span class="lab">Success</span><pre>200 {&quot;decision&quot;: &quot;APPROVED&quot; | &quot;REVIEW&quot; | &quot;REJECTED&quot;, &quot;interest_rate&quot;, &quot;emi&quot;, &quot;foir_percent&quot;, &quot;reasons&quot;: [...]}</pre></div>
+  </div>
+  <figure>
+    <div class="scroll"><svg viewBox="0 0 720 704" role="img" aria-label="POST /loans/eligibility workflow"><defs><marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M1 1L9 5L1 9z" class="ah"/></marker><marker id="af" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M1 1L9 5L1 9z" class="ah fail"/></marker><marker id="aw" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M1 1L9 5L1 9z" class="ah warn"/></marker></defs><rect class="n k-io" x="24" y="16" width="330" height="48" rx="7"/><text class="tt" x="189.0" y="36.0" text-anchor="middle">POST /api/v1/loans/eligibility</text><text class="ts" x="189.0" y="53.0" text-anchor="middle">loan_type, amount, tenure</text><path class="ln" d="M189.0 64 V92" marker-end="url(#a)"/><rect class="n k-sec" x="24" y="94" width="330" height="48" rx="7"/><text class="tt" x="189.0" y="114.0" text-anchor="middle">Validate body</text><text class="ts" x="189.0" y="131.0" text-anchor="middle">Type enum, amount &gt; 0, tenure ≤ 360</text><path class="ln fail" d="M354 118.0 H430" marker-end="url(#af)"/><text class="tl fail" x="393.0" y="112.0" text-anchor="middle">fails</text><rect class="n k-fail" x="432" y="94.0" width="264" height="48" rx="7"/><text class="tt" x="564.0" y="114.0" text-anchor="middle">422 Unprocessable</text><text class="ts" x="564.0" y="131.0" text-anchor="middle">Pydantic validation error</text><path class="ln" d="M189.0 142 V170" marker-end="url(#a)"/><rect class="n k-sec" x="24" y="172" width="330" height="48" rx="7"/><text class="tt" x="189.0" y="192.0" text-anchor="middle">Verify JWT (HTTPBearer)</text><text class="ts" x="189.0" y="209.0" text-anchor="middle">Signature, expiry, customer exists</text><path class="ln fail" d="M354 196.0 H430" marker-end="url(#af)"/><text class="tl fail" x="393.0" y="190.0" text-anchor="middle">fails</text><rect class="n k-fail" x="432" y="172.0" width="264" height="48" rx="7"/><text class="tt" x="564.0" y="192.0" text-anchor="middle">401 Unauthorized</text><text class="ts" x="564.0" y="209.0" text-anchor="middle">Invalid or expired token</text><path class="ln" d="M189.0 220 V248" marker-end="url(#a)"/><rect class="n k-data" x="24" y="250" width="330" height="48" rx="7"/><text class="tt" x="189.0" y="270.0" text-anchor="middle">Load customer</text><text class="ts" x="189.0" y="287.0" text-anchor="middle">KYC, credit score, income</text><path class="ln" d="M189.0 298 V326" marker-end="url(#a)"/><rect class="n k-logic" x="24" y="328" width="330" height="48" rx="7"/><text class="tt" x="189.0" y="348.0" text-anchor="middle">Pick interest rate</text><text class="ts" x="189.0" y="365.0" text-anchor="middle">P 11.50 (10.75 if 750+), H 8.50, C 9.25</text><path class="ln" d="M189.0 376 V404" marker-end="url(#a)"/><rect class="n k-logic" x="24" y="406" width="330" height="48" rx="7"/><text class="tt" x="189.0" y="426.0" text-anchor="middle">Apply rules</text><text class="ts" x="189.0" y="443.0" text-anchor="middle">Max tenure, KYC, score &lt;650 / 650–699</text><path class="ln" d="M189.0 454 V482" marker-end="url(#a)"/><rect class="n k-logic" x="24" y="484" width="330" height="48" rx="7"/><text class="tt" x="189.0" y="504.0" text-anchor="middle">EMI + FOIR</text><text class="ts" x="189.0" y="521.0" text-anchor="middle">(existing EMIs + new) ÷ income ≤ 50%</text><path class="ln" d="M189.0 532 V560" marker-end="url(#a)"/><rect class="n k-data" x="24" y="562" width="330" height="48" rx="7"/><text class="tt" x="189.0" y="582.0" text-anchor="middle">Audit LOAN_ELIGIBILITY, commit</text><text class="ts" x="189.0" y="599.0" text-anchor="middle">Type, amount, decision</text><path class="ln" d="M189.0 610 V638" marker-end="url(#a)"/><rect class="n k-end" x="24" y="640" width="330" height="48" rx="7"/><text class="tt" x="189.0" y="660.0" text-anchor="middle">200 OK</text><text class="ts" x="189.0" y="677.0" text-anchor="middle">Decision, rate, EMI, FOIR %, reasons</text></svg></div>
+    <figcaption>Source: <code>app/routers/loans.py · banking_service.check_loan_eligibility</code></figcaption>
+  </figure>
+</article>
+
+<article class="ep" id="loans">
+  <header class="ep-h">
+    <span class="num">09</span>
+    <span class="m m-get">GET</span>
+    <code class="path">/api/v1/loans</code>
+    <span class="auth a-jwt">Bearer JWT</span>
+  </header>
+  <h3>My loans</h3>
+  <p class="sum">Lists the caller&#x27;s existing loans, the same rows whose EMIs feed the FOIR check.</p>
+  <div class="io">
+    <div><span class="lab">Request</span><pre>Header Authorization: Bearer &lt;token&gt;</pre></div>
+    <div><span class="lab">Success</span><pre>200 [{&quot;loan_id&quot;, &quot;loan_type&quot;, &quot;principal&quot;, &quot;interest_rate&quot;, &quot;tenure_months&quot;, &quot;emi&quot;, &quot;status&quot;}]</pre></div>
+  </div>
+  <figure>
+    <div class="scroll"><svg viewBox="0 0 720 314" role="img" aria-label="GET /loans workflow"><defs><marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M1 1L9 5L1 9z" class="ah"/></marker><marker id="af" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M1 1L9 5L1 9z" class="ah fail"/></marker><marker id="aw" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M1 1L9 5L1 9z" class="ah warn"/></marker></defs><rect class="n k-io" x="24" y="16" width="330" height="48" rx="7"/><text class="tt" x="189.0" y="36.0" text-anchor="middle">GET /api/v1/loans</text><text class="ts" x="189.0" y="53.0" text-anchor="middle">Bearer token</text><path class="ln" d="M189.0 64 V92" marker-end="url(#a)"/><rect class="n k-sec" x="24" y="94" width="330" height="48" rx="7"/><text class="tt" x="189.0" y="114.0" text-anchor="middle">Verify JWT (HTTPBearer)</text><text class="ts" x="189.0" y="131.0" text-anchor="middle">Signature, expiry, customer exists</text><path class="ln fail" d="M354 118.0 H430" marker-end="url(#af)"/><text class="tl fail" x="393.0" y="112.0" text-anchor="middle">fails</text><rect class="n k-fail" x="432" y="94.0" width="264" height="48" rx="7"/><text class="tt" x="564.0" y="114.0" text-anchor="middle">401 Unauthorized</text><text class="ts" x="564.0" y="131.0" text-anchor="middle">Invalid or expired token</text><path class="ln" d="M189.0 142 V170" marker-end="url(#a)"/><rect class="n k-data" x="24" y="172" width="330" height="48" rx="7"/><text class="tt" x="189.0" y="192.0" text-anchor="middle">SELECT loans</text><text class="ts" x="189.0" y="209.0" text-anchor="middle">WHERE customer_id = token.sub</text><path class="ln" d="M189.0 220 V248" marker-end="url(#a)"/><rect class="n k-end" x="24" y="250" width="330" height="48" rx="7"/><text class="tt" x="189.0" y="270.0" text-anchor="middle">200 OK</text><text class="ts" x="189.0" y="287.0" text-anchor="middle">List of LoanOut</text></svg></div>
+    <figcaption>Source: <code>app/routers/loans.py · banking_service.list_loans</code></figcaption>
+  </figure>
+</article>
+<h2 class="grp">Tickets</h2>
+
+<article class="ep" id="ticket-create">
+  <header class="ep-h">
+    <span class="num">10</span>
+    <span class="m m-post">POST</span>
+    <code class="path">/api/v1/tickets</code>
+    <span class="auth a-jwt">Bearer JWT</span>
+  </header>
+  <h3>Raise dispute ticket</h3>
+  <p class="sum">Creates a support ticket with a priority taken from dispute_policy.md. A linked transaction must belong to the caller; one of INR 50,000 or more is always HIGH priority.</p>
+  <div class="io">
+    <div><span class="lab">Request</span><pre>{&quot;category&quot;: &quot;UNAUTHORIZED_TXN&quot; | &quot;FAILED_TXN&quot; | &quot;CARD&quot; | &quot;GENERAL&quot;, &quot;description&quot;: &quot;≥ 10 chars&quot;, &quot;txn_id&quot;: 12}</pre></div>
+    <div><span class="lab">Success</span><pre>201 {&quot;ticket_id&quot;, &quot;category&quot;, &quot;description&quot;, &quot;txn_id&quot;, &quot;priority&quot;, &quot;status&quot;: &quot;OPEN&quot;, &quot;created_at&quot;}</pre></div>
+  </div>
+  <figure>
+    <div class="scroll"><svg viewBox="0 0 720 626" role="img" aria-label="POST /tickets workflow"><defs><marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M1 1L9 5L1 9z" class="ah"/></marker><marker id="af" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M1 1L9 5L1 9z" class="ah fail"/></marker><marker id="aw" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M1 1L9 5L1 9z" class="ah warn"/></marker></defs><rect class="n k-io" x="24" y="16" width="330" height="48" rx="7"/><text class="tt" x="189.0" y="36.0" text-anchor="middle">POST /api/v1/tickets</text><text class="ts" x="189.0" y="53.0" text-anchor="middle">category, description, txn_id?</text><path class="ln" d="M189.0 64 V92" marker-end="url(#a)"/><rect class="n k-sec" x="24" y="94" width="330" height="48" rx="7"/><text class="tt" x="189.0" y="114.0" text-anchor="middle">Validate body</text><text class="ts" x="189.0" y="131.0" text-anchor="middle">Category enum, description 10–2000</text><path class="ln fail" d="M354 118.0 H430" marker-end="url(#af)"/><text class="tl fail" x="393.0" y="112.0" text-anchor="middle">fails</text><rect class="n k-fail" x="432" y="94.0" width="264" height="48" rx="7"/><text class="tt" x="564.0" y="114.0" text-anchor="middle">422 Unprocessable</text><text class="ts" x="564.0" y="131.0" text-anchor="middle">Pydantic validation error</text><path class="ln" d="M189.0 142 V170" marker-end="url(#a)"/><rect class="n k-sec" x="24" y="172" width="330" height="48" rx="7"/><text class="tt" x="189.0" y="192.0" text-anchor="middle">Verify JWT (HTTPBearer)</text><text class="ts" x="189.0" y="209.0" text-anchor="middle">Signature, expiry, customer exists</text><path class="ln fail" d="M354 196.0 H430" marker-end="url(#af)"/><text class="tl fail" x="393.0" y="190.0" text-anchor="middle">fails</text><rect class="n k-fail" x="432" y="172.0" width="264" height="48" rx="7"/><text class="tt" x="564.0" y="192.0" text-anchor="middle">401 Unauthorized</text><text class="ts" x="564.0" y="209.0" text-anchor="middle">Invalid or expired token</text><path class="ln" d="M189.0 220 V248" marker-end="url(#a)"/><rect class="n k-logic" x="24" y="250" width="330" height="48" rx="7"/><text class="tt" x="189.0" y="270.0" text-anchor="middle">Priority from category</text><text class="ts" x="189.0" y="287.0" text-anchor="middle">UNAUTH HIGH · FAILED/CARD MED · else LOW</text><path class="ln" d="M189.0 298 V326" marker-end="url(#a)"/><rect class="n k-sec" x="24" y="328" width="330" height="48" rx="7"/><text class="tt" x="189.0" y="348.0" text-anchor="middle">If txn_id: check it</text><text class="ts" x="189.0" y="365.0" text-anchor="middle">Exists and on caller&#x27;s account</text><path class="ln fail" d="M354 352.0 H430" marker-end="url(#af)"/><text class="tl fail" x="393.0" y="346.0" text-anchor="middle">fails</text><rect class="n k-fail" x="432" y="328.0" width="264" height="48" rx="7"/><text class="tt" x="564.0" y="348.0" text-anchor="middle">404 Not Found</text><text class="ts" x="564.0" y="365.0" text-anchor="middle">Transaction / account not found</text><path class="ln" d="M189.0 376 V404" marker-end="url(#a)"/><rect class="n k-logic" x="24" y="406" width="330" height="48" rx="7"/><text class="tt" x="189.0" y="426.0" text-anchor="middle">Amount ≥ INR 50,000?</text><text class="ts" x="189.0" y="443.0" text-anchor="middle">Then priority = HIGH</text><path class="ln" d="M189.0 454 V482" marker-end="url(#a)"/><rect class="n k-data" x="24" y="484" width="330" height="48" rx="7"/><text class="tt" x="189.0" y="504.0" text-anchor="middle">Insert ticket, audit, commit</text><text class="ts" x="189.0" y="521.0" text-anchor="middle">audit TICKET_CREATED</text><path class="ln" d="M189.0 532 V560" marker-end="url(#a)"/><rect class="n k-end" x="24" y="562" width="330" height="48" rx="7"/><text class="tt" x="189.0" y="582.0" text-anchor="middle">201 Created</text><text class="ts" x="189.0" y="599.0" text-anchor="middle">TicketOut with priority</text></svg></div>
+    <figcaption>Source: <code>app/routers/tickets.py · banking_service.create_ticket</code></figcaption>
+  </figure>
+</article>
+
+<article class="ep" id="ticket-status">
+  <header class="ep-h">
+    <span class="num">11</span>
+    <span class="m m-get">GET</span>
+    <code class="path">/api/v1/tickets/{ticket_id}</code>
+    <span class="auth a-jwt">Bearer JWT</span>
+  </header>
+  <h3>Ticket status</h3>
+  <p class="sum">Returns one ticket if it belongs to the caller; any other ticket ID returns 404.</p>
+  <div class="io">
+    <div><span class="lab">Request</span><pre>Path ticket_id (integer)</pre></div>
+    <div><span class="lab">Success</span><pre>200 {&quot;ticket_id&quot;, &quot;category&quot;, &quot;priority&quot;, &quot;status&quot;, &quot;created_at&quot;, …}</pre></div>
+  </div>
+  <figure>
+    <div class="scroll"><svg viewBox="0 0 720 314" role="img" aria-label="GET /tickets/{ticket_id} workflow"><defs><marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M1 1L9 5L1 9z" class="ah"/></marker><marker id="af" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M1 1L9 5L1 9z" class="ah fail"/></marker><marker id="aw" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M1 1L9 5L1 9z" class="ah warn"/></marker></defs><rect class="n k-io" x="24" y="16" width="330" height="48" rx="7"/><text class="tt" x="189.0" y="36.0" text-anchor="middle">GET /api/v1/tickets/7</text><text class="ts" x="189.0" y="53.0" text-anchor="middle">Bearer token</text><path class="ln" d="M189.0 64 V92" marker-end="url(#a)"/><rect class="n k-sec" x="24" y="94" width="330" height="48" rx="7"/><text class="tt" x="189.0" y="114.0" text-anchor="middle">Verify JWT (HTTPBearer)</text><text class="ts" x="189.0" y="131.0" text-anchor="middle">Signature, expiry, customer exists</text><path class="ln fail" d="M354 118.0 H430" marker-end="url(#af)"/><text class="tl fail" x="393.0" y="112.0" text-anchor="middle">fails</text><rect class="n k-fail" x="432" y="94.0" width="264" height="48" rx="7"/><text class="tt" x="564.0" y="114.0" text-anchor="middle">401 Unauthorized</text><text class="ts" x="564.0" y="131.0" text-anchor="middle">Invalid or expired token</text><path class="ln" d="M189.0 142 V170" marker-end="url(#a)"/><rect class="n k-sec" x="24" y="172" width="330" height="48" rx="7"/><text class="tt" x="189.0" y="192.0" text-anchor="middle">Load ticket + ownership</text><text class="ts" x="189.0" y="209.0" text-anchor="middle">ticket.customer_id = token.sub</text><path class="ln fail" d="M354 196.0 H430" marker-end="url(#af)"/><text class="tl fail" x="393.0" y="190.0" text-anchor="middle">fails</text><rect class="n k-fail" x="432" y="172.0" width="264" height="48" rx="7"/><text class="tt" x="564.0" y="192.0" text-anchor="middle">404 Not Found</text><text class="ts" x="564.0" y="209.0" text-anchor="middle">Ticket 7 not found</text><path class="ln" d="M189.0 220 V248" marker-end="url(#a)"/><rect class="n k-end" x="24" y="250" width="330" height="48" rx="7"/><text class="tt" x="189.0" y="270.0" text-anchor="middle">200 OK</text><text class="ts" x="189.0" y="287.0" text-anchor="middle">TicketOut</text></svg></div>
+    <figcaption>Source: <code>app/routers/tickets.py · banking_service.get_ticket</code></figcaption>
+  </figure>
+</article>
+<h2 class="grp">RAG</h2>
+
+<article class="ep" id="rag-ingest">
+  <header class="ep-h">
+    <span class="num">12</span>
+    <span class="m m-post">POST</span>
+    <code class="path">/api/v1/rag/ingest</code>
+    <span class="auth a-adm">Admin JWT</span>
+  </header>
+  <h3>Ingest policies</h3>
+  <p class="sum">Admin only. Rebuilds the Chroma collection from the policy Markdown files, so running it twice never duplicates chunks. Run it once before policy questions, and again after changing the embedding model.</p>
+  <div class="io">
+    <div><span class="lab">Request</span><pre>No body. Token must have role ADMIN (admin@securebank.test).</pre></div>
+    <div><span class="lab">Success</span><pre>200 {&quot;documents&quot;: 5, &quot;chunks&quot;: 13, &quot;collection&quot;: &quot;bank_policies&quot;}</pre></div>
+  </div>
+  <figure>
+    <div class="scroll"><svg viewBox="0 0 720 548" role="img" aria-label="POST /rag/ingest workflow"><defs><marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M1 1L9 5L1 9z" class="ah"/></marker><marker id="af" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M1 1L9 5L1 9z" class="ah fail"/></marker><marker id="aw" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M1 1L9 5L1 9z" class="ah warn"/></marker></defs><rect class="n k-io" x="24" y="16" width="330" height="48" rx="7"/><text class="tt" x="189.0" y="36.0" text-anchor="middle">POST /api/v1/rag/ingest</text><text class="ts" x="189.0" y="53.0" text-anchor="middle">Admin bearer token</text><path class="ln" d="M189.0 64 V92" marker-end="url(#a)"/><rect class="n k-sec" x="24" y="94" width="330" height="48" rx="7"/><text class="tt" x="189.0" y="114.0" text-anchor="middle">Verify JWT (HTTPBearer)</text><text class="ts" x="189.0" y="131.0" text-anchor="middle">Signature, expiry, customer exists</text><path class="ln fail" d="M354 118.0 H430" marker-end="url(#af)"/><text class="tl fail" x="393.0" y="112.0" text-anchor="middle">fails</text><rect class="n k-fail" x="432" y="94.0" width="264" height="48" rx="7"/><text class="tt" x="564.0" y="114.0" text-anchor="middle">401 Unauthorized</text><text class="ts" x="564.0" y="131.0" text-anchor="middle">Invalid or expired token</text><path class="ln" d="M189.0 142 V170" marker-end="url(#a)"/><rect class="n k-sec" x="24" y="172" width="330" height="48" rx="7"/><text class="tt" x="189.0" y="192.0" text-anchor="middle">require_admin()</text><text class="ts" x="189.0" y="209.0" text-anchor="middle">role == ADMIN</text><path class="ln fail" d="M354 196.0 H430" marker-end="url(#af)"/><text class="tl fail" x="393.0" y="190.0" text-anchor="middle">fails</text><rect class="n k-fail" x="432" y="172.0" width="264" height="48" rx="7"/><text class="tt" x="564.0" y="192.0" text-anchor="middle">403 Forbidden</text><text class="ts" x="564.0" y="209.0" text-anchor="middle">Admin role required</text><path class="ln" d="M189.0 220 V248" marker-end="url(#a)"/><rect class="n k-logic" x="24" y="250" width="330" height="48" rx="7"/><text class="tt" x="189.0" y="270.0" text-anchor="middle">Load data/policies/*.md</text><text class="ts" x="189.0" y="287.0" text-anchor="middle">5 docs, source = file name</text><path class="ln fail" d="M354 274.0 H430" marker-end="url(#af)"/><text class="tl fail" x="393.0" y="268.0" text-anchor="middle">fails</text><rect class="n k-fail" x="432" y="250.0" width="264" height="48" rx="7"/><text class="tt" x="564.0" y="270.0" text-anchor="middle">404 Not Found</text><text class="ts" x="564.0" y="287.0" text-anchor="middle">No .md files in POLICY_DIR</text><path class="ln" d="M189.0 298 V326" marker-end="url(#a)"/><rect class="n k-logic" x="24" y="328" width="330" height="48" rx="7"/><text class="tt" x="189.0" y="348.0" text-anchor="middle">Split 800 / 120 overlap</text><text class="ts" x="189.0" y="365.0" text-anchor="middle">Split on ## headings first</text><path class="ln" d="M189.0 376 V404" marker-end="url(#a)"/><rect class="n k-ai" x="24" y="406" width="330" height="48" rx="7"/><text class="tt" x="189.0" y="426.0" text-anchor="middle">Reset + embed + store</text><text class="ts" x="189.0" y="443.0" text-anchor="middle">gemini-embedding-001 → Chroma</text><path class="ln" d="M189.0 454 V482" marker-end="url(#a)"/><rect class="n k-end" x="24" y="484" width="330" height="48" rx="7"/><text class="tt" x="189.0" y="504.0" text-anchor="middle">200 OK</text><text class="ts" x="189.0" y="521.0" text-anchor="middle">documents, chunks, collection</text></svg></div>
+    <figcaption>Source: <code>app/routers/rag.py · rag_service.ingest</code></figcaption>
+  </figure>
+</article>
+
+<article class="ep" id="rag-query">
+  <header class="ep-h">
+    <span class="num">13</span>
+    <span class="m m-post">POST</span>
+    <code class="path">/api/v1/rag/query</code>
+    <span class="auth a-jwt">Bearer JWT</span>
+  </header>
+  <h3>Policy Q&amp;A</h3>
+  <p class="sum">Answers only from retrieved policy text. If the answer is not in the context, the prompt forces a fixed refusal pointing to the branch helpline.</p>
+  <div class="io">
+    <div><span class="lab">Request</span><pre>{&quot;question&quot;: &quot;What is the IMPS limit?&quot;, &quot;k&quot;: 4}</pre></div>
+    <div><span class="lab">Success</span><pre>200 {&quot;answer&quot;, &quot;sources&quot;: [&quot;fund_transfer_policy.md&quot;], &quot;chunks_used&quot;: 4}</pre></div>
+  </div>
+  <figure>
+    <div class="scroll"><svg viewBox="0 0 720 548" role="img" aria-label="POST /rag/query workflow"><defs><marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M1 1L9 5L1 9z" class="ah"/></marker><marker id="af" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M1 1L9 5L1 9z" class="ah fail"/></marker><marker id="aw" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M1 1L9 5L1 9z" class="ah warn"/></marker></defs><rect class="n k-io" x="24" y="16" width="330" height="48" rx="7"/><text class="tt" x="189.0" y="36.0" text-anchor="middle">POST /api/v1/rag/query</text><text class="ts" x="189.0" y="53.0" text-anchor="middle">question, k (1–10)</text><path class="ln" d="M189.0 64 V92" marker-end="url(#a)"/><rect class="n k-sec" x="24" y="94" width="330" height="48" rx="7"/><text class="tt" x="189.0" y="114.0" text-anchor="middle">Validate body</text><text class="ts" x="189.0" y="131.0" text-anchor="middle">question 3–1000 chars</text><path class="ln fail" d="M354 118.0 H430" marker-end="url(#af)"/><text class="tl fail" x="393.0" y="112.0" text-anchor="middle">fails</text><rect class="n k-fail" x="432" y="94.0" width="264" height="48" rx="7"/><text class="tt" x="564.0" y="114.0" text-anchor="middle">422 Unprocessable</text><text class="ts" x="564.0" y="131.0" text-anchor="middle">Pydantic validation error</text><path class="ln" d="M189.0 142 V170" marker-end="url(#a)"/><rect class="n k-sec" x="24" y="172" width="330" height="48" rx="7"/><text class="tt" x="189.0" y="192.0" text-anchor="middle">Verify JWT (HTTPBearer)</text><text class="ts" x="189.0" y="209.0" text-anchor="middle">Signature, expiry, customer exists</text><path class="ln fail" d="M354 196.0 H430" marker-end="url(#af)"/><text class="tl fail" x="393.0" y="190.0" text-anchor="middle">fails</text><rect class="n k-fail" x="432" y="172.0" width="264" height="48" rx="7"/><text class="tt" x="564.0" y="192.0" text-anchor="middle">401 Unauthorized</text><text class="ts" x="564.0" y="209.0" text-anchor="middle">Invalid or expired token</text><path class="ln" d="M189.0 220 V248" marker-end="url(#a)"/><rect class="n k-ai" x="24" y="250" width="330" height="48" rx="7"/><text class="tt" x="189.0" y="270.0" text-anchor="middle">Embed question + MMR</text><text class="ts" x="189.0" y="287.0" text-anchor="middle">k chunks from 3k candidates</text><path class="ln warn" d="M354 274.0 H430" marker-end="url(#aw)"/><text class="tl warn" x="393.0" y="268.0" text-anchor="middle">short-circuit</text><rect class="n k-warn" x="432" y="250.0" width="264" height="48" rx="7"/><text class="tt" x="564.0" y="270.0" text-anchor="middle">200 knowledge base empty</text><text class="ts" x="564.0" y="287.0" text-anchor="middle">Ask an admin to call /rag/ingest</text><path class="ln" d="M189.0 298 V326" marker-end="url(#a)"/><rect class="n k-ai" x="24" y="328" width="330" height="48" rx="7"/><text class="tt" x="189.0" y="348.0" text-anchor="middle">Grounded prompt</text><text class="ts" x="189.0" y="365.0" text-anchor="middle">Context only, under 120 words</text><path class="ln" d="M189.0 376 V404" marker-end="url(#a)"/><rect class="n k-ai" x="24" y="406" width="330" height="48" rx="7"/><text class="tt" x="189.0" y="426.0" text-anchor="middle">Gemini, temperature 0</text><text class="ts" x="189.0" y="443.0" text-anchor="middle">Not in context → fixed reply</text><path class="ln" d="M189.0 454 V482" marker-end="url(#a)"/><rect class="n k-end" x="24" y="484" width="330" height="48" rx="7"/><text class="tt" x="189.0" y="504.0" text-anchor="middle">200 OK</text><text class="ts" x="189.0" y="521.0" text-anchor="middle">answer + sources + chunks_used</text></svg></div>
+    <figcaption>Source: <code>app/routers/rag.py · rag_service.answer</code></figcaption>
+  </figure>
+</article>
+<h2 class="grp">Agent</h2>
+
+<article class="ep" id="agent-chat">
+  <header class="ep-h">
+    <span class="num">14</span>
+    <span class="m m-post">POST</span>
+    <code class="path">/api/v1/agent/chat</code>
+    <span class="auth a-jwt">Bearer JWT</span>
+  </header>
+  <h3>LangGraph assistant</h3>
+  <p class="sum">One chat turn through the LangGraph agent. The thread is namespaced as customer_id:thread_id so nobody can resume another customer&#x27;s conversation. A transfer stops at the approval step and returns awaiting_approval.</p>
+  <div class="io">
+    <div><span class="lab">Request</span><pre>{&quot;message&quot;: &quot;Transfer 2000 from SB1001 to SB1002 for dinner&quot;, &quot;thread_id&quot;: &quot;t1&quot;}</pre></div>
+    <div><span class="lab">Success</span><pre>200 {&quot;thread_id&quot;, &quot;status&quot;: &quot;completed&quot; | &quot;awaiting_approval&quot;, &quot;intent&quot;, &quot;answer&quot;, &quot;sources&quot;, &quot;pending_transfer&quot;}</pre></div>
+  </div>
+  <figure>
+    <div class="scroll"><svg viewBox="0 0 720 759" role="img" aria-label="POST /agent/chat workflow"><defs><marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M1 1L9 5L1 9z" class="ah"/></marker><marker id="af" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M1 1L9 5L1 9z" class="ah fail"/></marker><marker id="aw" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M1 1L9 5L1 9z" class="ah warn"/></marker></defs><rect class="n k-io" x="24" y="16" width="330" height="48" rx="7"/><text class="tt" x="189.0" y="36.0" text-anchor="middle">POST /api/v1/agent/chat</text><text class="ts" x="189.0" y="53.0" text-anchor="middle">message, thread_id</text><path class="ln" d="M189.0 64 V92" marker-end="url(#a)"/><rect class="n k-sec" x="24" y="94" width="330" height="48" rx="7"/><text class="tt" x="189.0" y="114.0" text-anchor="middle">Validate body</text><text class="ts" x="189.0" y="131.0" text-anchor="middle">message 1–2000, thread_id ≤ 64</text><path class="ln fail" d="M354 118.0 H430" marker-end="url(#af)"/><text class="tl fail" x="393.0" y="112.0" text-anchor="middle">fails</text><rect class="n k-fail" x="432" y="94.0" width="264" height="48" rx="7"/><text class="tt" x="564.0" y="114.0" text-anchor="middle">422 Unprocessable</text><text class="ts" x="564.0" y="131.0" text-anchor="middle">Pydantic validation error</text><path class="ln" d="M189.0 142 V170" marker-end="url(#a)"/><rect class="n k-sec" x="24" y="172" width="330" height="48" rx="7"/><text class="tt" x="189.0" y="192.0" text-anchor="middle">Verify JWT (HTTPBearer)</text><text class="ts" x="189.0" y="209.0" text-anchor="middle">Signature, expiry, customer exists</text><path class="ln fail" d="M354 196.0 H430" marker-end="url(#af)"/><text class="tl fail" x="393.0" y="190.0" text-anchor="middle">fails</text><rect class="n k-fail" x="432" y="172.0" width="264" height="48" rx="7"/><text class="tt" x="564.0" y="192.0" text-anchor="middle">401 Unauthorized</text><text class="ts" x="564.0" y="209.0" text-anchor="middle">Invalid or expired token</text><path class="ln" d="M189.0 220 V248" marker-end="url(#a)"/><rect class="n k-ai" x="24" y="250" width="330" height="48" rx="7"/><text class="tt" x="189.0" y="270.0" text-anchor="middle">Transfer already pending?</text><text class="ts" x="189.0" y="287.0" text-anchor="middle">Checkpointer state for thread</text><path class="ln fail" d="M354 274.0 H430" marker-end="url(#af)"/><text class="tl fail" x="393.0" y="268.0" text-anchor="middle">fails</text><rect class="n k-fail" x="432" y="250.0" width="264" height="48" rx="7"/><text class="tt" x="564.0" y="270.0" text-anchor="middle">409 Conflict</text><text class="ts" x="564.0" y="287.0" text-anchor="middle">Call /agent/approve first</text><path class="ln" d="M189.0 298 V326" marker-end="url(#a)"/><rect class="n k-sec" x="24" y="328" width="330" height="48" rx="7"/><text class="tt" x="189.0" y="348.0" text-anchor="middle">Guardrail</text><text class="ts" x="189.0" y="365.0" text-anchor="middle">Mask card + Aadhaar, detect injection</text><path class="ln warn" d="M354 352.0 H430" marker-end="url(#aw)"/><text class="tl warn" x="393.0" y="346.0" text-anchor="middle">short-circuit</text><rect class="n k-warn" x="432" y="328.0" width="264" height="48" rx="7"/><text class="tt" x="564.0" y="348.0" text-anchor="middle">200 intent: blocked</text><text class="ts" x="564.0" y="365.0" text-anchor="middle">Safe refusal, nothing else runs</text><path class="ln" d="M189.0 376 V404" marker-end="url(#a)"/><rect class="n k-ai" x="24" y="406" width="330" height="48" rx="7"/><text class="tt" x="189.0" y="426.0" text-anchor="middle">Intent router (Gemini)</text><text class="ts" x="189.0" y="443.0" text-anchor="middle">Structured output: 6 intents</text><path class="ln" d="M189.0 454 V484"/><path class="ln" d="M102.75 484 H617.25"/><path class="ln" d="M102.75 484 V504" marker-end="url(#a)"/><rect class="n k-ai" x="24.0" y="506" width="157.5" height="65" rx="7"/><text class="tt" x="102.75" y="526.0" text-anchor="middle">policy</text><text class="ts" x="102.75" y="543.0" text-anchor="middle">RAG answer + sources</text><path class="ln" d="M102.75 571 V587"/><path class="ln" d="M274.25 484 V504" marker-end="url(#a)"/><rect class="n k-ai" x="195.5" y="506" width="157.5" height="65" rx="7"/><text class="tt" x="274.25" y="526.0" text-anchor="middle">account · loan ·</text><text class="tt" x="274.25" y="543.0" text-anchor="middle">dispute</text><text class="ts" x="274.25" y="560.0" text-anchor="middle">MCP tool agent</text><path class="ln" d="M274.25 571 V587"/><path class="ln" d="M445.75 484 V504" marker-end="url(#a)"/><rect class="n k-ai" x="367.0" y="506" width="157.5" height="65" rx="7"/><text class="tt" x="445.75" y="526.0" text-anchor="middle">transfer</text><text class="ts" x="445.75" y="543.0" text-anchor="middle">Extract, validate,</text><text class="ts" x="445.75" y="558.0" text-anchor="middle">interrupt()</text><path class="ln" d="M445.75 571 V587"/><path class="ln" d="M617.25 484 V504" marker-end="url(#a)"/><rect class="n k-ai" x="538.5" y="506" width="157.5" height="65" rx="7"/><text class="tt" x="617.25" y="526.0" text-anchor="middle">general</text><text class="ts" x="617.25" y="543.0" text-anchor="middle">Short Gemini reply</text><path class="ln" d="M617.25 571 V587"/><path class="ln" d="M102.75 587 H617.25"/><path class="ln" d="M189.0 587 V615" marker-end="url(#a)"/><rect class="n k-data" x="24" y="617" width="330" height="48" rx="7"/><text class="tt" x="189.0" y="637.0" text-anchor="middle">Audit AGENT_CHAT</text><text class="ts" x="189.0" y="654.0" text-anchor="middle">thread_id, intent, status</text><path class="ln" d="M189.0 665 V693" marker-end="url(#a)"/><rect class="n k-end" x="24" y="695" width="330" height="48" rx="7"/><text class="tt" x="189.0" y="715.0" text-anchor="middle">200 OK</text><text class="ts" x="189.0" y="732.0" text-anchor="middle">completed or awaiting_approval</text></svg></div>
+    <figcaption>Source: <code>app/routers/agent.py · app/agent/graph.py · runner.py</code></figcaption>
+  </figure>
+</article>
+
+<article class="ep" id="agent-approve">
+  <header class="ep-h">
+    <span class="num">15</span>
+    <span class="m m-post">POST</span>
+    <code class="path">/api/v1/agent/approve</code>
+    <span class="auth a-jwt">Bearer JWT</span>
+  </header>
+  <h3>Approve transfer</h3>
+  <p class="sum">Resumes a paused graph with the customer&#x27;s decision. Approval runs the same atomic transfer as POST /transfers, with idempotency key agent-&lt;request_id&gt;; rejection moves no money.</p>
+  <div class="io">
+    <div><span class="lab">Request</span><pre>{&quot;thread_id&quot;: &quot;t1&quot;, &quot;approved&quot;: true}</pre></div>
+    <div><span class="lab">Success</span><pre>200 {&quot;status&quot;: &quot;completed&quot;, &quot;intent&quot;: &quot;transfer&quot;, &quot;answer&quot;: &quot;Done. … Reference TXN…&quot;}</pre></div>
+  </div>
+  <figure>
+    <div class="scroll"><svg viewBox="0 0 720 664" role="img" aria-label="POST /agent/approve workflow"><defs><marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M1 1L9 5L1 9z" class="ah"/></marker><marker id="af" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M1 1L9 5L1 9z" class="ah fail"/></marker><marker id="aw" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M1 1L9 5L1 9z" class="ah warn"/></marker></defs><rect class="n k-io" x="24" y="16" width="330" height="48" rx="7"/><text class="tt" x="189.0" y="36.0" text-anchor="middle">POST /api/v1/agent/approve</text><text class="ts" x="189.0" y="53.0" text-anchor="middle">thread_id, approved</text><path class="ln" d="M189.0 64 V92" marker-end="url(#a)"/><rect class="n k-sec" x="24" y="94" width="330" height="48" rx="7"/><text class="tt" x="189.0" y="114.0" text-anchor="middle">Validate body</text><text class="ts" x="189.0" y="131.0" text-anchor="middle">thread_id, approved: bool</text><path class="ln fail" d="M354 118.0 H430" marker-end="url(#af)"/><text class="tl fail" x="393.0" y="112.0" text-anchor="middle">fails</text><rect class="n k-fail" x="432" y="94.0" width="264" height="48" rx="7"/><text class="tt" x="564.0" y="114.0" text-anchor="middle">422 Unprocessable</text><text class="ts" x="564.0" y="131.0" text-anchor="middle">Pydantic validation error</text><path class="ln" d="M189.0 142 V170" marker-end="url(#a)"/><rect class="n k-sec" x="24" y="172" width="330" height="48" rx="7"/><text class="tt" x="189.0" y="192.0" text-anchor="middle">Verify JWT (HTTPBearer)</text><text class="ts" x="189.0" y="209.0" text-anchor="middle">Signature, expiry, customer exists</text><path class="ln fail" d="M354 196.0 H430" marker-end="url(#af)"/><text class="tl fail" x="393.0" y="190.0" text-anchor="middle">fails</text><rect class="n k-fail" x="432" y="172.0" width="264" height="48" rx="7"/><text class="tt" x="564.0" y="192.0" text-anchor="middle">401 Unauthorized</text><text class="ts" x="564.0" y="209.0" text-anchor="middle">Invalid or expired token</text><path class="ln" d="M189.0 220 V248" marker-end="url(#a)"/><rect class="n k-ai" x="24" y="250" width="330" height="48" rx="7"/><text class="tt" x="189.0" y="270.0" text-anchor="middle">Transfer pending on thread?</text><text class="ts" x="189.0" y="287.0" text-anchor="middle">Interrupt in checkpointer</text><path class="ln fail" d="M354 274.0 H430" marker-end="url(#af)"/><text class="tl fail" x="393.0" y="268.0" text-anchor="middle">fails</text><rect class="n k-fail" x="432" y="250.0" width="264" height="48" rx="7"/><text class="tt" x="564.0" y="270.0" text-anchor="middle">409 Conflict</text><text class="ts" x="564.0" y="287.0" text-anchor="middle">No transfer waiting for approval</text><path class="ln" d="M189.0 298 V326" marker-end="url(#a)"/><rect class="n k-ai" x="24" y="328" width="330" height="48" rx="7"/><text class="tt" x="189.0" y="348.0" text-anchor="middle">Resume graph</text><text class="ts" x="189.0" y="365.0" text-anchor="middle">Command(resume={approved})</text><path class="ln" d="M189.0 376 V406"/><path class="ln" d="M188.5 406 H531.5"/><path class="ln" d="M188.5 406 V426" marker-end="url(#a)"/><rect class="n k-ai" x="24.0" y="428" width="329.0" height="48" rx="7"/><text class="tt" x="188.5" y="448.0" text-anchor="middle">approved: true</text><text class="ts" x="188.5" y="465.0" text-anchor="middle">bank.transfer(): lock, check, commit</text><path class="ln" d="M188.5 476 V492"/><path class="ln" d="M531.5 406 V426" marker-end="url(#a)"/><rect class="n k-ai" x="367.0" y="428" width="329.0" height="48" rx="7"/><text class="tt" x="531.5" y="448.0" text-anchor="middle">approved: false</text><text class="ts" x="531.5" y="465.0" text-anchor="middle">Cancel, no money moved</text><path class="ln" d="M531.5 476 V492"/><path class="ln" d="M188.5 492 H531.5"/><path class="ln" d="M189.0 492 V520" marker-end="url(#a)"/><rect class="n k-data" x="24" y="522" width="330" height="48" rx="7"/><text class="tt" x="189.0" y="542.0" text-anchor="middle">Audit AGENT_APPROVAL</text><text class="ts" x="189.0" y="559.0" text-anchor="middle">thread_id, approved</text><path class="ln" d="M189.0 570 V598" marker-end="url(#a)"/><rect class="n k-end" x="24" y="600" width="330" height="48" rx="7"/><text class="tt" x="189.0" y="620.0" text-anchor="middle">200 OK</text><text class="ts" x="189.0" y="637.0" text-anchor="middle">Reference + new balance, or cancelled</text></svg></div>
+    <figcaption>Source: <code>app/routers/agent.py · runner.approve · graph.execute_transfer</code></figcaption>
+  </figure>
+</article>
+<h2 class="grp">MCP</h2>
+
+<article class="ep" id="mcp-tools">
+  <header class="ep-h">
+    <span class="num">16</span>
+    <span class="m m-get">GET</span>
+    <code class="path">/api/v1/mcp/tools</code>
+    <span class="auth a-jwt">Bearer JWT</span>
+  </header>
+  <h3>List MCP tools</h3>
+  <p class="sum">Shows the 7 tools the MCP server publishes, with their full input schemas. Tool definitions are loaded once and cached; with stdio transport the first call starts the MCP server as a child process.</p>
+  <div class="io">
+    <div><span class="lab">Request</span><pre>Header Authorization: Bearer &lt;token&gt;</pre></div>
+    <div><span class="lab">Success</span><pre>200 [{&quot;name&quot;: &quot;get_account_balance&quot;, &quot;description&quot;, &quot;input_schema&quot;}, … 7 tools]</pre></div>
+  </div>
+  <figure>
+    <div class="scroll"><svg viewBox="0 0 720 392" role="img" aria-label="GET /mcp/tools workflow"><defs><marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M1 1L9 5L1 9z" class="ah"/></marker><marker id="af" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M1 1L9 5L1 9z" class="ah fail"/></marker><marker id="aw" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M1 1L9 5L1 9z" class="ah warn"/></marker></defs><rect class="n k-io" x="24" y="16" width="330" height="48" rx="7"/><text class="tt" x="189.0" y="36.0" text-anchor="middle">GET /api/v1/mcp/tools</text><text class="ts" x="189.0" y="53.0" text-anchor="middle">Bearer token</text><path class="ln" d="M189.0 64 V92" marker-end="url(#a)"/><rect class="n k-sec" x="24" y="94" width="330" height="48" rx="7"/><text class="tt" x="189.0" y="114.0" text-anchor="middle">Verify JWT (HTTPBearer)</text><text class="ts" x="189.0" y="131.0" text-anchor="middle">Signature, expiry, customer exists</text><path class="ln fail" d="M354 118.0 H430" marker-end="url(#af)"/><text class="tl fail" x="393.0" y="112.0" text-anchor="middle">fails</text><rect class="n k-fail" x="432" y="94.0" width="264" height="48" rx="7"/><text class="tt" x="564.0" y="114.0" text-anchor="middle">401 Unauthorized</text><text class="ts" x="564.0" y="131.0" text-anchor="middle">Invalid or expired token</text><path class="ln" d="M189.0 142 V170" marker-end="url(#a)"/><rect class="n k-ai" x="24" y="172" width="330" height="48" rx="7"/><text class="tt" x="189.0" y="192.0" text-anchor="middle">get_mcp_tools()</text><text class="ts" x="189.0" y="209.0" text-anchor="middle">Cached after the first call</text><path class="ln" d="M189.0 220 V248" marker-end="url(#a)"/><rect class="n k-ai" x="24" y="250" width="330" height="48" rx="7"/><text class="tt" x="189.0" y="270.0" text-anchor="middle">Connect to MCP server</text><text class="ts" x="189.0" y="287.0" text-anchor="middle">stdio child process or HTTP :8001</text><path class="ln fail" d="M354 274.0 H430" marker-end="url(#af)"/><text class="tl fail" x="393.0" y="268.0" text-anchor="middle">fails</text><rect class="n k-fail" x="432" y="250.0" width="264" height="48" rx="7"/><text class="tt" x="564.0" y="270.0" text-anchor="middle">503 Unavailable</text><text class="ts" x="564.0" y="287.0" text-anchor="middle">MCP server unavailable: &lt;error&gt;</text><path class="ln" d="M189.0 298 V326" marker-end="url(#a)"/><rect class="n k-end" x="24" y="328" width="330" height="48" rx="7"/><text class="tt" x="189.0" y="348.0" text-anchor="middle">200 OK</text><text class="ts" x="189.0" y="365.0" text-anchor="middle">7 tools with input schemas</text></svg></div>
+    <figcaption>Source: <code>app/routers/mcp.py · app/agent/mcp_client.py</code></figcaption>
+  </figure>
+</article>
+</main>
+</div>
+</body>
+</html>
