@@ -1,5 +1,5 @@
 
-# Prompts, Firing Sequence and Commands
+# Prompts, Firing Sequence and Commands and Refer codegen folder from the zip
 
 This document answers three questions:
 1. **Which prompts** generate the code, and in **what order** (the firing sequence)?
